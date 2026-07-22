@@ -6,6 +6,7 @@
 /// directly by consumers.
 library;
 
+export 'src/controller/menu_slide_controller.dart' show MenuSlideController;
 export 'src/models/menu_badge.dart' show MenuBadge;
 export 'src/models/menu_icon.dart' show MenuIcon, MenuIconData, MenuAssetIcon, MenuCustomIcon;
 export 'src/models/menu_item.dart' show MenuItem;
