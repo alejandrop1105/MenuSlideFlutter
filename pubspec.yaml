@@ -36,6 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   rive: ^0.13.20
 
+  menu_slide_flutter:
+    path: packages/menu_slide_flutter
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
