@@ -90,7 +90,11 @@ void main() {
     });
 
     testWidgets('tapping an enabled row selects it via the controller', (tester) async {
-      final controller = MenuSlideController(items: const [home, inbox]);
+      // PR7 made the panel a genuine off-canvas reveal — it is not
+      // hit-testable at rest (matches real drawer UX; see
+      // sdd/flutter-samples/apply-progress PR7 section). Open it first so
+      // this row-tap assertion still exercises the real gesture path.
+      final controller = MenuSlideController(items: const [home, inbox], isOpen: true);
 
       await tester.pumpWidget(wrap(MenuSlideShell(
         controller: controller,
@@ -107,7 +111,10 @@ void main() {
 
     testWidgets('tapping a disabled row does not change the controller selection',
         (tester) async {
-      final controller = MenuSlideController(items: const [home, settings]);
+      // Open — see the comment on the duplicate-id test below (PR7
+      // off-canvas reveal): otherwise this tap would miss for the wrong
+      // reason instead of genuinely exercising the disabled-row no-op.
+      final controller = MenuSlideController(items: const [home, settings], isOpen: true);
 
       await tester.pumpWidget(wrap(MenuSlideShell(
         controller: controller,
@@ -305,7 +312,11 @@ void main() {
         label: 'Dup Enabled',
         icon: MenuIconData(Icons.check),
       );
-      final controller = MenuSlideController(items: const [dupDisabled, dupEnabled]);
+      // Open — otherwise the tap below would miss the off-canvas panel
+      // entirely (PR7) and this test would pass for the wrong reason
+      // instead of genuinely exercising the duplicate-id quirk.
+      final controller =
+          MenuSlideController(items: const [dupDisabled, dupEnabled], isOpen: true);
 
       await tester.pumpWidget(wrap(MenuSlideShell(
         controller: controller,
@@ -398,7 +409,9 @@ void main() {
 
     testWidgets('tapping an enabled row still selects it with header/footer present',
         (tester) async {
-      final controller = MenuSlideController(items: const [home, inbox]);
+      // Open — see the comment on the equivalent test above (PR7 off-canvas
+      // reveal).
+      final controller = MenuSlideController(items: const [home, inbox], isOpen: true);
 
       await tester.pumpWidget(wrap(MenuSlideShell(
         controller: controller,
