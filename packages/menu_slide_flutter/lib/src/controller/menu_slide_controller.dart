@@ -77,6 +77,17 @@ class MenuSlideController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears the current selection, if any.
+  ///
+  /// Idempotent: a no-op (no notification) when there is no selection to
+  /// clear, matching the idempotency pattern used by [selectItem]/[open]/
+  /// [close].
+  void clearSelection() {
+    if (_selectedItemId == null) return;
+    _selectedItemId = null;
+    notifyListeners();
+  }
+
   /// Opens the menu panel intent. Idempotent: a no-op (no notification, no
   /// exception) when already open.
   void open() {

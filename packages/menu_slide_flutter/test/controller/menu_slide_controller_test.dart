@@ -228,6 +228,29 @@ void main() {
     });
   });
 
+  group('MenuSlideController.clearSelection', () {
+    test('clears an existing selection and notifies exactly once', () {
+      final controller = MenuSlideController(items: const [_home, _settings]);
+      controller.selectItem('home');
+      final counter = _NotificationCounter(controller);
+
+      controller.clearSelection();
+
+      expect(controller.selectedItemId, isNull);
+      expect(counter.count, 1);
+    });
+
+    test('is idempotent when already unselected: no-op, no notification', () {
+      final controller = MenuSlideController(items: const [_home, _settings]);
+      final counter = _NotificationCounter(controller);
+
+      controller.clearSelection();
+
+      expect(controller.selectedItemId, isNull);
+      expect(counter.count, 0);
+    });
+  });
+
   group('MenuSlideController theme-mode command', () {
     test('setThemeMode updates themeMode and notifies', () {
       final controller = MenuSlideController();

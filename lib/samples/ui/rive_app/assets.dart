@@ -11,4 +11,3 @@ const String shapesRiv = 'assets/samples/ui/rive_app/rive/shapes.riv';
 const String buttonRiv = 'assets/samples/ui/rive_app/rive/button.riv';
 const String checkRiv = 'assets/samples/ui/rive_app/rive/check.riv';
 const String confettiRiv = 'assets/samples/ui/rive_app/rive/confetti.riv';
-const String menuButtonRiv = 'assets/samples/ui/rive_app/rive/menu_button.riv';
