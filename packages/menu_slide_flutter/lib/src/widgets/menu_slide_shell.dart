@@ -1,26 +1,31 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 
 import '../controller/menu_slide_controller.dart';
 import '../models/menu_section.dart';
 import '../theme/menu_slide_theme_data.dart';
+import 'menu_button.dart';
 import 'menu_row.dart';
 
 /// The primary public widget of `menu_slide_flutter`: a shell that wraps a
 /// host page ([child]) with a menu panel driven by a [MenuSlideController].
 ///
-/// This slice (PR5b+PR6) assembles the FUNCTIONAL structure: it groups
+/// This slice (PR5b+PR6+PR7) assembles the FULL structure: it groups
 /// `controller.items` by [sections] via `groupItemsBySection`, renders each
 /// group as a section title (when the section has one) followed by its
 /// [MenuRow]s, wires row taps to `controller.selectItem`, and reflects the
 /// current selection. The panel is a fixed [headerBuilder] slot, then the
 /// scrollable item list, then a fixed [footerBuilder] slot — both optional
 /// and host-built (identity/branding/theme-toggle content, never
-/// prescribed by this package; navigation stays host-owned). It
-/// deliberately does NOT yet implement the diagonal 3D reveal animation —
-/// `controller.isOpen` is not yet wired to a transform, see the seam
-/// comment in [build]. That lands in PR7 (see `sdd/flutter-samples/tasks`).
+/// prescribed by this package; navigation stays host-owned). It also owns
+/// the DIAGONAL 3D REVEAL: `_MenuSlideShellState` drives an
+/// `AnimationController` from `controller.isOpen`'s intent (see
+/// [_onControllerChanged]) and applies the reveal transform ported
+/// verbatim from the original sample (`home.dart`) to both the panel and
+/// [child]. [showMenuButton] controls the shell's built-in floating
+/// toggle button.
 class MenuSlideShell extends StatefulWidget {
   const MenuSlideShell({
     super.key,
@@ -30,6 +35,7 @@ class MenuSlideShell extends StatefulWidget {
     this.theme,
     this.headerBuilder,
     this.footerBuilder,
+    this.showMenuButton = true,
   });
 
   /// The host's page content, rendered alongside the menu panel.
@@ -64,15 +70,55 @@ class MenuSlideShell extends StatefulWidget {
   /// entirely host-built.
   final WidgetBuilder? footerBuilder;
 
+  /// Whether the shell renders its own built-in floating toggle button (an
+  /// [AnimatedIcon] morphing between hamburger/close, wired to
+  /// `controller.toggle()`). Defaults to `true`. Set to `false` when the
+  /// host wants to drive `controller.open()`/`close()`/`toggle()` from its
+  /// own UI instead (e.g. an AppBar leading icon) — the reveal animation
+  /// itself is unaffected either way.
+  final bool showMenuButton;
+
   @override
   State<MenuSlideShell> createState() => _MenuSlideShellState();
 }
 
-class _MenuSlideShellState extends State<MenuSlideShell> {
+class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProviderStateMixin {
+  /// Spring physics driving the OPEN transition — ported verbatim from the
+  /// original sample (`home.dart`'s `springDesc`) to preserve the exact
+  /// feel. The CLOSE transition uses a plain [AnimationController.reverse]
+  /// (also matching the original).
+  static const SpringDescription _springDescription = SpringDescription(
+    mass: 0.1,
+    stiffness: 40,
+    damping: 5,
+  );
+
+  static const Duration _revealDuration = Duration(milliseconds: 200);
+
+  /// Owns the vsync/ticker for the reveal — `MenuSlideController.isOpen` is
+  /// an INTENT only (see its doc comment); this shell is the sole owner of
+  /// the actual animation driving the diagonal reveal transform.
+  late final AnimationController _revealController;
+
+  /// Tracks the last `controller.isOpen` value this shell reacted to, so
+  /// [_onControllerChanged] can tell an isOpen TRANSITION (drive the
+  /// animation) apart from any other notification (selection/items change
+  /// — rebuild only).
+  late bool _lastIsOpen;
+
   @override
   void initState() {
     super.initState();
+    _lastIsOpen = widget.controller.isOpen;
     widget.controller.addListener(_onControllerChanged);
+    _revealController = AnimationController(
+      duration: _revealDuration,
+      upperBound: 1,
+      vsync: this,
+    );
+    if (_lastIsOpen) {
+      _revealController.value = 1;
+    }
   }
 
   @override
@@ -81,50 +127,132 @@ class _MenuSlideShellState extends State<MenuSlideShell> {
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_onControllerChanged);
       widget.controller.addListener(_onControllerChanged);
+      // A controller swap is not an animated transition — snap the reveal
+      // to match the new controller's current intent instantly.
+      final isOpen = widget.controller.isOpen;
+      if (isOpen != _lastIsOpen) {
+        _lastIsOpen = isOpen;
+        _revealController.value = isOpen ? 1 : 0;
+      }
     }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
+    _revealController.dispose();
     super.dispose();
   }
 
-  void _onControllerChanged() => setState(() {});
+  void _onControllerChanged() {
+    final isOpen = widget.controller.isOpen;
+    if (isOpen != _lastIsOpen) {
+      _lastIsOpen = isOpen;
+      if (isOpen) {
+        _revealController.animateWith(SpringSimulation(_springDescription, 0, 1, 0));
+      } else {
+        _revealController.reverse();
+      }
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = MenuSlideThemeData.resolve(context, widget.theme);
+    final Animation<double> anim = _revealController.view;
 
-    // PR7 wires `widget.controller.isOpen` to the diagonal reveal
-    // animation (AnimationController + Matrix4 transform, design #623
-    // section 3) and replaces this plain Row with an animated Stack. This
-    // slice keeps the panel and host child laid out side by side,
-    // unanimated, so both remain independently hit-testable.
-    //
     // The panel width is clamped to the available viewport width via
-    // LayoutBuilder so this Row can never overflow on narrow viewports
-    // (e.g. a viewport narrower than the default 288 panelMaxWidth). On an
-    // ultra-narrow screen the clamp can leave the host `child` 0 width —
-    // acceptable for this transitional, non-animated slice; PR7's Stack
-    // overlay removes this side-by-side width contention entirely.
+    // LayoutBuilder so the panel never renders wider than a narrow
+    // viewport (e.g. a viewport narrower than the default 288
+    // panelMaxWidth).
     return LayoutBuilder(
       builder: (context, constraints) {
         final panelWidth = math.min(theme.panelMaxWidth, constraints.maxWidth);
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        return Stack(
+          fit: StackFit.expand,
           children: [
-            SizedBox(
-              width: panelWidth,
-              child: _MenuPanel(
-                controller: widget.controller,
-                sections: widget.sections,
-                theme: theme,
-                headerBuilder: widget.headerBuilder,
-                footerBuilder: widget.footerBuilder,
+            // PANEL layer: rotates/translates in from off-canvas-left and
+            // fades in as `anim` goes 0 -> 1. Transform math ported
+            // verbatim from `home.dart`'s sidebar `AnimatedBuilder`.
+            RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: anim,
+                builder: (context, child) {
+                  return Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.001)
+                      ..rotateY(((1 - anim.value) * -30) * math.pi / 180)
+                      ..translateByDouble((1 - anim.value) * theme.restTranslateX, 0, 0, 1),
+                    child: child,
+                  );
+                },
+                child: FadeTransition(
+                  opacity: anim,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: panelWidth,
+                      child: _MenuPanel(
+                        controller: widget.controller,
+                        sections: widget.sections,
+                        theme: theme,
+                        headerBuilder: widget.headerBuilder,
+                        footerBuilder: widget.footerBuilder,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-            Expanded(child: widget.child),
+            // HOST CHILD layer: shrinks, slides right by `revealWidth`, and
+            // rotates as `anim` goes 0 -> 1 — ported verbatim from
+            // `home.dart`'s page-body `AnimatedBuilder`.
+            RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: anim,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 1 - anim.value * 0.1,
+                    child: Transform.translate(
+                      offset: Offset(anim.value * theme.revealWidth, 0),
+                      child: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.001)
+                          ..rotateY((anim.value * 30) * math.pi / 180),
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
+                child: widget.child,
+              ),
+            ),
+            // Built-in floating toggle button, opt-out via
+            // `showMenuButton: false`. Shifts right by `menuButtonShift` as
+            // `anim` goes 0 -> 1, mirroring `home.dart`'s
+            // `SizedBox(width: anim * 216)` row trick — implemented here
+            // via `Positioned.left` instead, which sidesteps the
+            // Transform-based-touch-area quirk that trick worked around.
+            if (widget.showMenuButton)
+              AnimatedBuilder(
+                animation: anim,
+                builder: (context, child) {
+                  return Positioned(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    left: MediaQuery.of(context).padding.left +
+                        16 +
+                        anim.value * theme.menuButtonShift,
+                    child: child!,
+                  );
+                },
+                child: MenuSlideButton(
+                  progress: anim,
+                  onTap: widget.controller.toggle,
+                ),
+              ),
           ],
         );
       },
