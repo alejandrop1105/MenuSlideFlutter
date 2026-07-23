@@ -318,4 +318,213 @@ void main() {
       expect(controller.selectedItemId, isNull);
     });
   });
+
+  group('MenuSlideShell header/footer slots', () {
+    testWidgets('headerBuilder renders above the first row', (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox]);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        headerBuilder: (context) => const Text('Header', key: Key('menu-header')),
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(find.byKey(const Key('menu-header')), findsOneWidget);
+      final headerY = tester.getTopLeft(find.byKey(const Key('menu-header'))).dy;
+      final firstRowY = tester.getTopLeft(find.text('Home')).dy;
+      expect(headerY, lessThan(firstRowY));
+    });
+
+    testWidgets('headerBuilder null renders no header and no error', (tester) async {
+      final controller = MenuSlideController(items: const [home]);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('menu-header')), findsNothing);
+    });
+
+    testWidgets('footerBuilder renders below the last row', (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox]);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        footerBuilder: (context) => const Text('Footer', key: Key('menu-footer')),
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(find.byKey(const Key('menu-footer')), findsOneWidget);
+      final footerY = tester.getTopLeft(find.byKey(const Key('menu-footer'))).dy;
+      final lastRowY = tester.getTopLeft(find.text('Inbox')).dy;
+      expect(footerY, greaterThan(lastRowY));
+    });
+
+    testWidgets('footerBuilder null renders no footer and no error', (tester) async {
+      final controller = MenuSlideController(items: const [home]);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('menu-footer')), findsNothing);
+    });
+
+    testWidgets('header and footer stay present while the item list scrolls', (tester) async {
+      final items = List.generate(
+        30,
+        (i) => MenuItem(id: 'item-$i', label: 'Item $i', icon: const MenuIconData(Icons.star)),
+      );
+      final controller = MenuSlideController(items: items);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        headerBuilder: (context) => const Text('Header', key: Key('menu-header')),
+        footerBuilder: (context) => const Text('Footer', key: Key('menu-footer')),
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(find.byKey(const Key('menu-header')), findsOneWidget);
+      expect(find.byKey(const Key('menu-footer')), findsOneWidget);
+      // 30 rows at the default rowHeight (56) far exceed the default test
+      // viewport height — the last row starts off-screen because the
+      // MIDDLE list is the scrollable region, while header/footer are fixed.
+      expect(find.text('Item 29'), findsNothing);
+    });
+
+    testWidgets('tapping an enabled row still selects it with header/footer present',
+        (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox]);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        headerBuilder: (context) => const Text('Header'),
+        footerBuilder: (context) => const Text('Footer'),
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(controller.selectedItemId, isNull);
+
+      await tester.tap(find.text('Inbox'));
+      await tester.pump();
+
+      expect(controller.selectedItemId, 'inbox');
+    });
+
+    testWidgets('headerBuilder receives a usable BuildContext', (tester) async {
+      final controller = MenuSlideController(items: const [home]);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        headerBuilder: (context) {
+          // Must not throw — proves the context can resolve inherited
+          // widgets (Theme, MediaQuery) the same way any other descendant
+          // of the shell's subtree can.
+          final theme = Theme.of(context);
+          final mediaQuery = MediaQuery.of(context);
+          return Text(
+            '${theme.runtimeType}-${mediaQuery.size.width}',
+            key: const Key('menu-header'),
+          );
+        },
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('menu-header')), findsOneWidget);
+    });
+
+    testWidgets('a tall headerBuilder in a short panel never overflows', (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox]);
+
+      // A 5000px-tall header inside a panel constrained to ~200px must be
+      // capped/scrolled internally rather than overflowing the panel Column.
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          height: 200,
+          child: MenuSlideShell(
+            controller: controller,
+            headerBuilder: (context) => Container(height: 5000, color: Colors.red),
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tall header and footer together in a short panel never overflow',
+        (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox]);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          height: 300,
+          child: MenuSlideShell(
+            controller: controller,
+            headerBuilder: (context) => Container(height: 250, color: Colors.red),
+            footerBuilder: (context) => Container(height: 250, color: Colors.blue),
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('large text scale header/footer in a short panel never overflow',
+        (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(4.0)),
+            child: Scaffold(
+              body: SizedBox(
+                height: 200,
+                child: MenuSlideShell(
+                  controller: controller,
+                  headerBuilder: (context) => const Text('Header', style: TextStyle(fontSize: 40)),
+                  footerBuilder: (context) => const Text('Footer', style: TextStyle(fontSize: 40)),
+                  child: const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'normal case unchanged: small header stays above first row in a tall panel',
+        (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox]);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            headerBuilder: (context) => const SizedBox(
+              height: 60,
+              child: Text('Header', key: Key('menu-header')),
+            ),
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+
+      expect(tester.takeException(), isNull);
+      final headerY = tester.getTopLeft(find.byKey(const Key('menu-header'))).dy;
+      final firstRowY = tester.getTopLeft(find.text('Home')).dy;
+      expect(headerY, lessThan(firstRowY));
+    });
+  });
 }

@@ -10,15 +10,17 @@ import 'menu_row.dart';
 /// The primary public widget of `menu_slide_flutter`: a shell that wraps a
 /// host page ([child]) with a menu panel driven by a [MenuSlideController].
 ///
-/// This slice (PR5b) assembles the FUNCTIONAL structure only: it groups
+/// This slice (PR5b+PR6) assembles the FUNCTIONAL structure: it groups
 /// `controller.items` by [sections] via `groupItemsBySection`, renders each
 /// group as a section title (when the section has one) followed by its
 /// [MenuRow]s, wires row taps to `controller.selectItem`, and reflects the
-/// current selection. It deliberately does NOT implement the diagonal 3D
-/// reveal animation — `controller.isOpen` is not yet wired to a transform,
-/// see the seam comment in [build] — or the `headerBuilder`/`footerBuilder`
-/// slots. Those land in PR7 and PR6 respectively (see
-/// `sdd/flutter-samples/tasks`).
+/// current selection. The panel is a fixed [headerBuilder] slot, then the
+/// scrollable item list, then a fixed [footerBuilder] slot — both optional
+/// and host-built (identity/branding/theme-toggle content, never
+/// prescribed by this package; navigation stays host-owned). It
+/// deliberately does NOT yet implement the diagonal 3D reveal animation —
+/// `controller.isOpen` is not yet wired to a transform, see the seam
+/// comment in [build]. That lands in PR7 (see `sdd/flutter-samples/tasks`).
 class MenuSlideShell extends StatefulWidget {
   const MenuSlideShell({
     super.key,
@@ -26,6 +28,8 @@ class MenuSlideShell extends StatefulWidget {
     required this.controller,
     this.sections = const [],
     this.theme,
+    this.headerBuilder,
+    this.footerBuilder,
   });
 
   /// The host's page content, rendered alongside the menu panel.
@@ -45,6 +49,20 @@ class MenuSlideShell extends StatefulWidget {
   /// `MenuSlideThemeData.resolve` (a registered `ThemeData` extension, then
   /// `MenuSlideThemeData.fallback()`).
   final MenuSlideThemeData? theme;
+
+  /// Optional builder rendered at the FIXED top of the panel, above the
+  /// scrollable item list (e.g. a profile/identity card). When `null`, no
+  /// header widget and no reserved placeholder space is rendered — the
+  /// panel starts directly at the item list. The component does not
+  /// prescribe the header's content; it is entirely host-built.
+  final WidgetBuilder? headerBuilder;
+
+  /// Optional builder rendered at the FIXED bottom of the panel, below the
+  /// scrollable item list (e.g. a dark-mode toggle or version label). When
+  /// `null`, no footer widget and no reserved placeholder space is
+  /// rendered. The component does not prescribe the footer's content; it is
+  /// entirely host-built.
+  final WidgetBuilder? footerBuilder;
 
   @override
   State<MenuSlideShell> createState() => _MenuSlideShellState();
@@ -102,6 +120,8 @@ class _MenuSlideShellState extends State<MenuSlideShell> {
                 controller: widget.controller,
                 sections: widget.sections,
                 theme: theme,
+                headerBuilder: widget.headerBuilder,
+                footerBuilder: widget.footerBuilder,
               ),
             ),
             Expanded(child: widget.child),
@@ -112,35 +132,47 @@ class _MenuSlideShellState extends State<MenuSlideShell> {
   }
 }
 
-/// Renders `controller.items` grouped by [sections] as a scrollable list of
-/// section titles and [MenuRow]s. Private — assembled only by
-/// [MenuSlideShell].
+/// Renders the panel as a fixed [headerBuilder] slot, then `controller.items`
+/// grouped by [sections] as a SCROLLABLE list of section titles and
+/// [MenuRow]s, then a fixed [footerBuilder] slot. Private — assembled only
+/// by [MenuSlideShell].
+///
+/// The header and footer are plain host-built `WidgetBuilder`s: this widget
+/// does not prescribe their content (identity, branding, a theme toggle,
+/// etc. are all host territory — see design decision #618/#623). When a
+/// slot is `null`, nothing is rendered for it and no placeholder space is
+/// reserved — only the item list (and an optional divider adjacent to a
+/// present slot) occupies the panel.
 class _MenuPanel extends StatelessWidget {
   const _MenuPanel({
     required this.controller,
     required this.sections,
     required this.theme,
+    this.headerBuilder,
+    this.footerBuilder,
   });
 
   final MenuSlideController controller;
   final List<MenuSection> sections;
   final MenuSlideThemeData theme;
+  final WidgetBuilder? headerBuilder;
+  final WidgetBuilder? footerBuilder;
 
   @override
   Widget build(BuildContext context) {
     final grouped = groupItemsBySection(controller.items, sections);
 
-    final children = <Widget>[];
+    final rows = <Widget>[];
     for (final entry in grouped.entries) {
       final section = entry.key;
       if (section != null) {
-        children.add(Padding(
+        rows.add(Padding(
           padding: EdgeInsets.symmetric(vertical: theme.itemSpacing / 2),
           child: Text(section.title, style: theme.sectionTitleStyle),
         ));
       }
       for (final item in entry.value) {
-        children.add(MenuRow(
+        rows.add(MenuRow(
           item: item,
           isSelected: controller.selectedItemId == item.id,
           theme: theme,
@@ -153,7 +185,42 @@ class _MenuPanel extends StatelessWidget {
       key: const Key('menu-slide-panel'),
       color: theme.panelColor,
       padding: theme.panelPadding,
-      child: ListView(children: children),
+      // The header and footer slots are host-built and can be arbitrarily
+      // tall (e.g. a multi-line profile card, or a large accessibility text
+      // scale). LayoutBuilder caps each slot to a fraction of the available
+      // panel height and wraps it in a SingleChildScrollView so that
+      // oversized content scrolls INTERNALLY within its cap instead of
+      // overflowing this Column. Small slots (the common case) render at
+      // their natural size and never scroll, so normal-case layout is
+      // unchanged. The middle item list always keeps the remaining space via
+      // Expanded.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final slotCap = constraints.hasBoundedHeight
+              ? constraints.maxHeight * 0.45
+              : double.infinity;
+
+          Widget capSlot(Widget slot) {
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: slotCap),
+              child: SingleChildScrollView(child: slot),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (headerBuilder != null) capSlot(headerBuilder!(context)),
+              if (headerBuilder != null)
+                Divider(color: theme.dividerColor, height: 1, thickness: 1),
+              Expanded(child: ListView(children: rows)),
+              if (footerBuilder != null)
+                Divider(color: theme.dividerColor, height: 1, thickness: 1),
+              if (footerBuilder != null) capSlot(footerBuilder!(context)),
+            ],
+          );
+        },
+      ),
     );
   }
 }
