@@ -12,3 +12,4 @@ export 'src/models/menu_icon.dart' show MenuIcon, MenuIconData, MenuAssetIcon, M
 export 'src/models/menu_item.dart' show MenuItem;
 export 'src/models/menu_section.dart' show MenuSection, groupItemsBySection;
 export 'src/theme/menu_slide_theme_data.dart' show MenuSlideThemeData;
+export 'src/widgets/menu_slide_shell.dart' show MenuSlideShell;
