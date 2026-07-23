@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/widgets.dart';
+
+import 'menu_fallback_icon.dart';
 
 /// Describes how a menu row's leading icon should be built.
 ///
@@ -21,7 +22,11 @@ sealed class MenuIcon {
 
   /// The documented placeholder icon returned by [MenuIcon.fromJson] when
   /// the `type` discriminator cannot be resolved to a serializable variant.
-  static const MenuIcon fallback = MenuIconData(Icons.help_outline);
+  ///
+  /// Built from [kMenuFallbackIcon] — the single package-wide shared
+  /// fallback glyph, also used by `MenuIconView`'s asset-load-failure
+  /// fallback (see spec assumption #4).
+  static const MenuIcon fallback = MenuIconData(kMenuFallbackIcon);
 
   /// Parses a [MenuIcon] from its JSON representation.
   ///
