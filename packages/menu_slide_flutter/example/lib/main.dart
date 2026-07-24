@@ -252,6 +252,7 @@ class _DemoHomeState extends State<DemoHome> {
       backdropBlurSigma: widget.settings.backdropBlur,
       backdropOpacity: widget.settings.backdropOpacity,
       revealWidthFactor: widget.settings.revealFactor,
+      revealTiltDegrees: widget.settings.tiltDegrees,
     );
 
     final navigationBar = _buildNavigationBar();

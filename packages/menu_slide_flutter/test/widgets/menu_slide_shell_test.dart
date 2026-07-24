@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_protected_member
 
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -749,6 +750,139 @@ void main() {
       final scaleWidget =
           tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-scale')));
       expect(scaleWidget.transform.entry(0, 0), closeTo(0.9, 0.001));
+    });
+  });
+
+  group('MenuSlideShell reveal tilt angle (revealTiltDegrees)', () {
+    // `Matrix4.rotateY` builds a rotation matrix whose `entry(0, 0)` is
+    // `cos(theta)` — since every angle under test here is within 0..90
+    // degrees (where cosine is monotonic), `acos` recovers `theta`
+    // unambiguously from that entry.
+    double rotationDegrees(Matrix4 m) => math.acos(m.entry(0, 0)) * 180 / math.pi;
+
+    testWidgets(
+        'revealWidthFactor 0.0 with revealTiltDegrees 45: scale stays flush (1.0) but the '
+        'tilt is still ~45deg — the angle is independent of the separation factor',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback()
+          .copyWith(revealWidthFactor: 0.0, revealTiltDegrees: 45);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final scaleWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-scale')));
+      expect(scaleWidget.transform.entry(0, 0), closeTo(1.0, 0.001));
+
+      final rotateWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-rotate')));
+      expect(rotationDegrees(rotateWidget.transform), closeTo(45, 0.5));
+    });
+
+    testWidgets('revealTiltDegrees 0 renders a perfectly flat (identity) rotation at open',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealTiltDegrees: 0);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final rotateWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-rotate')));
+      expect(rotationDegrees(rotateWidget.transform), closeTo(0, 0.5));
+    });
+
+    testWidgets('a larger revealTiltDegrees yields a proportionally larger open angle',
+        (tester) async {
+      final controllerSmall = MenuSlideController(isOpen: true);
+      final smallTiltTheme = MenuSlideThemeData.fallback().copyWith(revealTiltDegrees: 20);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controllerSmall,
+            theme: smallTiltTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final smallAngle = rotationDegrees(tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-rotate')))
+          .transform);
+
+      final controllerLarge = MenuSlideController(isOpen: true);
+      final largeTiltTheme = MenuSlideThemeData.fallback().copyWith(revealTiltDegrees: 60);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controllerLarge,
+            theme: largeTiltTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final largeAngle = rotationDegrees(tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-rotate')))
+          .transform);
+
+      expect(smallAngle, closeTo(20, 0.5));
+      expect(largeAngle, closeTo(60, 0.5));
+      expect(largeAngle, greaterThan(smallAngle));
+    });
+
+    testWidgets(
+        'the fixed-px fallback path (revealWidthFactor null) still renders the original '
+        '30deg tilt at open, unchanged', (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      // Default theme: revealWidthFactor null, revealTiltDegrees 30 (fallback default).
+      final customTheme = MenuSlideThemeData.fallback();
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final rotateWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-rotate')));
+      expect(rotationDegrees(rotateWidget.transform), closeTo(30, 0.5));
     });
   });
 

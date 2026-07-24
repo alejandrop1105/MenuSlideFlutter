@@ -37,6 +37,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     this.rowHeight = 56,
     this.panelPadding = const EdgeInsets.all(8),
     this.itemSpacing = 0,
+    required this.revealTiltDegrees,
   });
 
   /// Background color of the menu panel.
@@ -107,6 +108,19 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
   /// menu/page separation responsive across viewport sizes. `null` (the
   /// default) preserves the original fixed-pixel [revealWidth] behavior.
   final double? revealWidthFactor;
+
+  /// Maximum Y-axis rotation (in degrees) applied to the host page/`child`
+  /// content during the diagonal reveal, at full open (`anim.value == 1`).
+  /// This is the OPENING ANGLE of the 3D tilt, and it is intentionally
+  /// independent of [revealWidthFactor]/[revealWidth]: the separation
+  /// (how far the page shifts away from the panel) and the tilt (how much
+  /// it rotates while doing so) are two different stylistic knobs. `0`
+  /// renders a perfectly flat page (no rotation at all); increasing this
+  /// value exaggerates the 3D effect regardless of how little (or how much)
+  /// separation is configured — even at zero separation the page can still
+  /// visibly tilt. Defaults to `30` in [fallback], matching the original
+  /// sample's fixed 30-degree tilt.
+  final double revealTiltDegrees;
 
   /// Maximum width of the menu panel. Also the basis for every derived
   /// reveal-geometry constant below (replaces the sample's magic literal
@@ -183,6 +197,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         // A very dark, neutral navy that reads sensibly as the shell's base
         // layer whether the host page content leans light or dark.
         backdropColor: Color(0xFF0B1220),
+        revealTiltDegrees: 30,
       );
 
   /// Resolves the effective theme for [context]: an explicit per-instance
@@ -226,6 +241,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     double? rowHeight,
     EdgeInsetsGeometry? panelPadding,
     double? itemSpacing,
+    double? revealTiltDegrees,
   }) {
     return MenuSlideThemeData(
       panelColor: panelColor ?? this.panelColor,
@@ -250,6 +266,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       rowHeight: rowHeight ?? this.rowHeight,
       panelPadding: panelPadding ?? this.panelPadding,
       itemSpacing: itemSpacing ?? this.itemSpacing,
+      revealTiltDegrees: revealTiltDegrees ?? this.revealTiltDegrees,
     );
   }
 
@@ -282,6 +299,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       rowHeight: _lerpDouble(rowHeight, other.rowHeight, t),
       panelPadding: EdgeInsetsGeometry.lerp(panelPadding, other.panelPadding, t)!,
       itemSpacing: _lerpDouble(itemSpacing, other.itemSpacing, t),
+      revealTiltDegrees: _lerpDouble(revealTiltDegrees, other.revealTiltDegrees, t),
     );
   }
 
@@ -312,7 +330,8 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         other.panelRadius == panelRadius &&
         other.rowHeight == rowHeight &&
         other.panelPadding == panelPadding &&
-        other.itemSpacing == itemSpacing;
+        other.itemSpacing == itemSpacing &&
+        other.revealTiltDegrees == revealTiltDegrees;
   }
 
   // `Object.hash` only supports up to 20 positional arguments — this
@@ -342,5 +361,6 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         rowHeight,
         panelPadding,
         itemSpacing,
+        revealTiltDegrees,
       ]);
 }
