@@ -84,11 +84,14 @@ class DemoSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  double _revealFactor = 0.6;
+  double _revealFactor = 0.35;
 
-  /// Percentage (0.3..0.9) of the viewport width the host page shifts by
+  /// Additional separation (0.0..0.85) beyond the menu's own width, as a
+  /// fraction of the remaining viewport width, the host page shifts by
   /// while the menu is open — a RESPONSIVE (percentage-based) menu/page
-  /// separation, applied via `MenuSlideThemeData.revealWidthFactor`.
+  /// separation, applied via `MenuSlideThemeData.revealWidthFactor`. `0`
+  /// means the page sits flush with the menu's edge (fully revealed, zero
+  /// gap).
   double get revealFactor => _revealFactor;
 
   set revealFactor(double value) {

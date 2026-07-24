@@ -515,9 +515,61 @@ void main() {
   });
 
   group('MenuSlideShell responsive reveal', () {
+    // Default panelMaxWidth is 288, so the effective clamped panel width for
+    // a 400/500-wide viewport (both wider than 288) is 288 unclamped.
     testWidgets(
-        'revealWidthFactor computes the child translate as a percentage of the available width',
+        'revealWidthFactor 0.0 puts the child translate flush with the effective panel width',
         (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 0.0);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final translateWidget = tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
+      // At factor 0, the page sits flush with the menu's right edge (the
+      // effective clamped panel width — min(panelMaxWidth, viewport)) —
+      // NOT at 0, which would leave the page under the menu.
+      expect(translateWidget.transform.getTranslation().x, closeTo(288, 0.01));
+    });
+
+    testWidgets('revealWidthFactor 1.0 puts the child translate at the full viewport width',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 1.0);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final translateWidget = tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
+      expect(translateWidget.transform.getTranslation().x, closeTo(400, 0.01));
+    });
+
+    testWidgets(
+        'revealWidthFactor between 0 and 1 interpolates between the panel width and the '
+        'viewport width', (tester) async {
       final controller = MenuSlideController(isOpen: true);
       final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 0.5);
 
@@ -536,17 +588,18 @@ void main() {
 
       final translateWidget = tester
           .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
-      expect(translateWidget.transform.getTranslation().x, closeTo(400 * 0.5, 0.01));
+      // panelWidth(288) + 0.5 * (400 - 288) == 344.
+      expect(translateWidget.transform.getTranslation().x, closeTo(344, 0.01));
     });
 
-    testWidgets('a different viewport width yields a proportionally different offset',
+    testWidgets('the interpolation stays proportional across a different viewport width',
         (tester) async {
       final controller = MenuSlideController(isOpen: true);
       final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 0.5);
 
       await tester.pumpWidget(wrap(
         SizedBox(
-          width: 200,
+          width: 500,
           height: 600,
           child: MenuSlideShell(
             controller: controller,
@@ -559,7 +612,8 @@ void main() {
 
       final translateWidget = tester
           .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
-      expect(translateWidget.transform.getTranslation().x, closeTo(200 * 0.5, 0.01));
+      // panelWidth(288) + 0.5 * (500 - 288) == 394.
+      expect(translateWidget.transform.getTranslation().x, closeTo(394, 0.01));
     });
 
     testWidgets('revealWidthFactor null falls back to the fixed revealWidth pixel value',

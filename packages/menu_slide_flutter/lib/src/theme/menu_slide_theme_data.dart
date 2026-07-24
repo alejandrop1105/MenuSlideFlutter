@@ -97,11 +97,15 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
   final double backdropOpacity;
 
   /// When non-null, the host page/`child` content's reveal offset is
-  /// computed as a PERCENTAGE of the available viewport width
-  /// (`availableWidth * revealWidthFactor`) instead of the fixed
-  /// [revealWidth] pixel value — making the menu/page separation
-  /// responsive across viewport sizes. `null` (the default) preserves the
-  /// original fixed-pixel [revealWidth] behavior.
+  /// computed from the effective (clamped) panel width outward, instead of
+  /// the fixed [revealWidth] pixel value: `panelWidth + revealWidthFactor *
+  /// (availableWidth - panelWidth)`. The factor is the ADDITIONAL
+  /// separation beyond the panel's own width, expressed as a fraction of
+  /// the remaining viewport width — `0` puts the page flush with the
+  /// panel's right edge (the menu fully revealed, zero gap) and `1` pushes
+  /// the page all the way to the edge of the viewport. This makes the
+  /// menu/page separation responsive across viewport sizes. `null` (the
+  /// default) preserves the original fixed-pixel [revealWidth] behavior.
   final double? revealWidthFactor;
 
   /// Maximum width of the menu panel. Also the basis for every derived

@@ -258,8 +258,19 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
               child: AnimatedBuilder(
                 animation: anim,
                 builder: (context, child) {
+                  // When `revealWidthFactor` is set, the factor is the
+                  // ADDITIONAL separation beyond the panel's own width, as a
+                  // fraction of the remaining viewport width — NOT a
+                  // fraction of the full viewport. At factor 0, the page
+                  // sits flush with the panel's right edge (`panelWidth`,
+                  // the same effective clamped width used for the panel
+                  // itself above); at factor 1, the page is pushed all the
+                  // way to `constraints.maxWidth`. This keeps the menu
+                  // fully revealed (zero gap) at the 0% default instead of
+                  // the page covering the menu at x=0.
                   final reveal = theme.revealWidthFactor != null
-                      ? constraints.maxWidth * theme.revealWidthFactor!
+                      ? (panelWidth + theme.revealWidthFactor! * (constraints.maxWidth - panelWidth))
+                          .clamp(0.0, constraints.maxWidth)
                       : theme.revealWidth;
                   return Transform.scale(
                     scale: 1 - anim.value * 0.1,
