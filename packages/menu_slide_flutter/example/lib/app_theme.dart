@@ -56,6 +56,7 @@ class AppTheme {
               : Colors.white,
           menuButtonIconColor:
               brightness == Brightness.dark ? colorScheme.onSurface : const Color(0xFF17203A),
+          backdropColor: colorScheme.surfaceDim,
         ),
       ],
     );

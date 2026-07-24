@@ -60,6 +60,12 @@ class DemoMenu {
       enabled: false,
       sectionId: 'account',
     ),
+    MenuItem(
+      id: 'settings',
+      label: 'Configuration',
+      icon: MenuIconData(Icons.settings_outlined),
+      sectionId: 'account',
+    ),
   ];
 
   static const _titles = {
@@ -69,6 +75,7 @@ class DemoMenu {
     'profile': 'Profile',
     'notifications': 'Notifications',
     'billing': 'Billing',
+    'settings': 'Configuration',
   };
 
   /// Human-readable title for a menu item [id], or `null` when [id] is
@@ -78,6 +85,10 @@ class DemoMenu {
   /// The page widget for a menu item [id], or `null` when [id] is
   /// `null`/unknown. The host — not the package — owns this click-to-page
   /// mapping.
+  ///
+  /// `settings` is intentionally NOT mapped here: `ConfigurationPage`
+  /// requires the live `DemoSettings` instance, which this static method
+  /// has no access to — `DemoHome.build` special-cases that id directly.
   static Widget? pageForId(String? id) {
     switch (id) {
       case 'dashboard':
