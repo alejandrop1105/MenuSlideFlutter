@@ -127,6 +127,68 @@ void main() {
       expect(controller.selectedItemId, isNull);
     });
 
+    testWidgets('tapping an enabled row closes the menu by default (closeOnSelect)',
+        (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox], isOpen: true);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(controller.isOpen, isTrue);
+
+      await tester.tap(find.text('Inbox'));
+      await tester.pump();
+
+      expect(controller.isOpen, isFalse);
+      expect(controller.selectedItemId, 'inbox');
+    });
+
+    testWidgets(
+        'tapping the already-selected row still closes the menu (no dead click)',
+        (tester) async {
+      // Regression test: MenuSlideController.selectItem is idempotent — a
+      // no-op (no notification) when re-selecting the current id. Closing
+      // on tap must NOT depend on that notification firing: tapping a row
+      // that is ALREADY selected must still close the menu.
+      final controller = MenuSlideController(items: const [home, inbox]);
+      controller.selectItem('home');
+      controller.open();
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(controller.selectedItemId, 'home');
+      expect(controller.isOpen, isTrue);
+
+      await tester.tap(find.text('Home'));
+      await tester.pump();
+
+      expect(controller.isOpen, isFalse);
+      expect(controller.selectedItemId, 'home');
+    });
+
+    testWidgets(
+        'closeOnSelect false keeps the menu open on tap but still updates selection',
+        (tester) async {
+      final controller = MenuSlideController(items: const [home, inbox], isOpen: true);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        closeOnSelect: false,
+        child: const SizedBox.shrink(),
+      )));
+
+      await tester.tap(find.text('Inbox'));
+      await tester.pump();
+
+      expect(controller.isOpen, isTrue);
+      expect(controller.selectedItemId, 'inbox');
+    });
+
     testWidgets('reacts to controller changes after updateItems', (tester) async {
       final controller = MenuSlideController(items: const [home]);
 
