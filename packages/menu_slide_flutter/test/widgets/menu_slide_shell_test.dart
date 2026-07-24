@@ -639,6 +639,117 @@ void main() {
           .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
       expect(translateWidget.transform.getTranslation().x, closeTo(265, 0.01));
     });
+
+    testWidgets(
+        'revealWidthFactor 0.0 keeps the child flat & flush — no shrink, no rotation, at the '
+        'panel edge', (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 0.0);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final scaleWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-scale')));
+      // At factor 0, the depth effect (scale + rotation) is fully coupled to
+      // the separation: zero separation means zero depth, so the page must
+      // render at its natural scale (no shrink) — otherwise the
+      // center-anchored scale would push the page's visible left edge past
+      // the translate position, reopening the gap this fix closes.
+      //
+      // `Transform.scale` builds `Matrix4.diagonal3Values(scale, scale,
+      // 1.0)`, so `entry(0, 0)` reads the exact x-axis scale factor we set —
+      // unlike `getMaxScaleOnAxis()`, which is always dominated by the
+      // unused z-axis entry (always `1.0`) whenever the intended scale is
+      // below 1.0, making it unusable here.
+      expect(scaleWidget.transform.entry(0, 0), closeTo(1.0, 0.001));
+
+      final translateWidget = tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
+      expect(translateWidget.transform.getTranslation().x, closeTo(288, 0.01));
+    });
+
+    testWidgets('revealWidthFactor 1.0 keeps the full depth effect — scale ~0.9 at open',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 1.0);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final scaleWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-scale')));
+      expect(scaleWidget.transform.entry(0, 0), closeTo(0.9, 0.001));
+    });
+
+    testWidgets('revealWidthFactor 0.5 scales the depth effect proportionally — scale ~0.95',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 0.5);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final scaleWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-scale')));
+      // 1 - 0.1 * 0.5 == 0.95.
+      expect(scaleWidget.transform.entry(0, 0), closeTo(0.95, 0.001));
+    });
+
+    testWidgets(
+        'revealWidthFactor null falls back to the fixed revealWidth path and keeps the '
+        'original depth effect unchanged (scale ~0.9 at open)', (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      // Default theme has revealWidthFactor: null.
+      final customTheme = MenuSlideThemeData.fallback();
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final scaleWidget =
+          tester.widget<Transform>(find.byKey(const Key('menu-slide-reveal-scale')));
+      expect(scaleWidget.transform.entry(0, 0), closeTo(0.9, 0.001));
+    });
   });
 
   group('MenuSlideShell header/footer slots', () {
