@@ -187,6 +187,17 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
         return Stack(
           fit: StackFit.expand,
           children: [
+            // BACKDROP layer: a plain, non-interactive fill occupying the
+            // shell's full bounds, painted BEHIND the panel and the
+            // transformed child. `ColoredBox` (unlike `Container`) has no
+            // gesture/hit-testing behavior of its own, so it never
+            // intercepts taps meant for the panel or child layers above it.
+            Positioned.fill(
+              child: ColoredBox(
+                key: const Key('menu-slide-backdrop'),
+                color: theme.backdropColor,
+              ),
+            ),
             // PANEL layer: rotates/translates in from off-canvas-left and
             // fades in as `anim` goes 0 -> 1. Transform math ported
             // verbatim from `home.dart`'s sidebar `AnimatedBuilder`.

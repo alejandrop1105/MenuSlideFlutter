@@ -253,6 +253,23 @@ void main() {
       expect(panel.color, Colors.pink);
     });
 
+    testWidgets('backdropColor renders a full-shell background layer behind panel and child',
+        (tester) async {
+      final controller = MenuSlideController();
+      final customTheme =
+          MenuSlideThemeData.fallback().copyWith(backdropColor: const Color(0xFF00FF00));
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        theme: customTheme,
+        child: const SizedBox.shrink(),
+      )));
+
+      final backdrop =
+          tester.widget<ColoredBox>(find.byKey(const Key('menu-slide-backdrop')));
+      expect(backdrop.color, const Color(0xFF00FF00));
+    });
+
     testWidgets('disposing after pumping does not throw and detaches the listener',
         (tester) async {
       final controller = MenuSlideController(items: const [home]);

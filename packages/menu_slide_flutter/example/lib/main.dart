@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:menu_slide_flutter/menu_slide_flutter.dart';
 
 import 'app_theme.dart';
+import 'config_page.dart';
 import 'demo_menu.dart';
+import 'demo_settings.dart';
 import 'pages.dart';
 
 void main() => runApp(const DemoApp());
@@ -24,6 +26,10 @@ class DemoApp extends StatefulWidget {
 class _DemoAppState extends State<DemoApp> {
   late final MenuSlideController _controller;
 
+  /// Live overrides for the menu's colors and layout, edited from
+  /// `ConfigurationPage` — see `DemoSettings`.
+  late final DemoSettings _settings;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +43,11 @@ class _DemoAppState extends State<DemoApp> {
     // a theme-mode change — fired from the footer switch in `DemoHome` — flow
     // all the way up into `MaterialApp.themeMode` below.
     _controller.addListener(_onControllerChanged);
+
+    _settings = DemoSettings();
+    // Same unconditional rebuild-on-notify pattern as `_controller` above —
+    // any Configuration-page edit must reach `DemoHome.build` immediately.
+    _settings.addListener(_onControllerChanged);
   }
 
   void _onControllerChanged() => setState(() {});
@@ -45,6 +56,8 @@ class _DemoAppState extends State<DemoApp> {
   void dispose() {
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
+    _settings.removeListener(_onControllerChanged);
+    _settings.dispose();
     super.dispose();
   }
 
@@ -60,7 +73,7 @@ class _DemoAppState extends State<DemoApp> {
       // and applies to `MaterialApp.themeMode` — the package itself never
       // touches `Theme.of(context)` or paints anything outside its own panel.
       themeMode: _controller.themeMode,
-      home: DemoHome(controller: _controller),
+      home: DemoHome(controller: _controller, settings: _settings),
     );
   }
 }
@@ -75,9 +88,12 @@ class _DemoAppState extends State<DemoApp> {
 /// destination is never a dead click, because both read the SAME
 /// `controller.selectedItemId` as their source of truth.
 class DemoHome extends StatefulWidget {
-  const DemoHome({super.key, required this.controller});
+  const DemoHome({super.key, required this.controller, required this.settings});
 
   final MenuSlideController controller;
+
+  /// Live overrides for the menu's colors and layout — see `DemoSettings`.
+  final DemoSettings settings;
 
   @override
   State<DemoHome> createState() => _DemoHomeState();
@@ -136,8 +152,7 @@ class _DemoHomeState extends State<DemoHome> {
     widget.controller.selectItem(id);
   }
 
-  Widget _profileHeader(BuildContext context) {
-    final menuTheme = MenuSlideThemeData.resolve(context);
+  Widget _profileHeader(BuildContext context, MenuSlideThemeData menuTheme) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -164,8 +179,7 @@ class _DemoHomeState extends State<DemoHome> {
     );
   }
 
-  Widget _themeToggleFooter(BuildContext context) {
-    final menuTheme = MenuSlideThemeData.resolve(context);
+  Widget _themeToggleFooter(BuildContext context, MenuSlideThemeData menuTheme) {
     return SwitchListTile(
       key: const Key('theme-toggle-switch'),
       contentPadding: EdgeInsets.zero,
@@ -182,43 +196,79 @@ class _DemoHomeState extends State<DemoHome> {
     );
   }
 
+  Widget _buildNavigationBar() {
+    return NavigationBar(
+      selectedIndex: _bottomIndex,
+      onDestinationSelected: _onDestinationSelected,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.folder_outlined),
+          selectedIcon: Icon(Icons.folder),
+          label: 'Projects',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.search),
+          label: 'Search',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final page = DemoMenu.pageForId(widget.controller.selectedItemId) ?? const DashboardPage();
+    final selectedId = widget.controller.selectedItemId;
+    // 'settings' is handled here rather than in `DemoMenu.pageForId` because
+    // `ConfigurationPage` needs the live `widget.settings` instance, which
+    // that static host-owned mapping has no access to.
+    final page = selectedId == 'settings'
+        ? ConfigurationPage(settings: widget.settings)
+        : DemoMenu.pageForId(selectedId) ?? const DashboardPage();
+
+    // Start from the ACTIVE app theme's own `MenuSlideThemeData` (light or
+    // dark, whichever `Theme.of(context)` currently resolves to) so
+    // everything but panel/backdrop color keeps auto-rebranding on light/
+    // dark toggle. Only apply an explicit override where the Configuration
+    // page has set one.
+    final modeTheme = MenuSlideThemeData.resolve(context);
+    final effectiveTheme = modeTheme.copyWith(
+      panelColor: widget.settings.menuColor,
+      backdropColor: widget.settings.backdropColor,
+    );
+
+    final navigationBar = _buildNavigationBar();
+
+    // Host composition, not component behavior: `MenuSlideShell` simply
+    // fills whatever space its `child` is given — it has no opinion on
+    // where the bottom bar lives. When `fullScreenMenu` is enabled, the
+    // bar is composed INSIDE the shell's `child` so the diagonal reveal
+    // covers the full screen height, bottom bar included. When disabled,
+    // the bar stays OUTSIDE as `Scaffold.bottomNavigationBar`, bounding the
+    // menu above it — the layout this demo shipped with before this toggle.
+    final fullScreen = widget.settings.fullScreenMenu;
+    final shellChild = fullScreen
+        ? Column(children: [Expanded(child: page), navigationBar])
+        : page;
 
     return Scaffold(
       body: MenuSlideShell(
         controller: widget.controller,
         sections: DemoMenu.sections,
-        headerBuilder: _profileHeader,
-        footerBuilder: _themeToggleFooter,
-        child: page,
+        theme: effectiveTheme,
+        headerBuilder: (context) => _profileHeader(context, effectiveTheme),
+        footerBuilder: (context) => _themeToggleFooter(context, effectiveTheme),
+        child: shellChild,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _bottomIndex,
-        onDestinationSelected: _onDestinationSelected,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.folder_outlined),
-            selectedIcon: Icon(Icons.folder),
-            label: 'Projects',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
+      bottomNavigationBar: fullScreen ? null : navigationBar,
     );
   }
 }

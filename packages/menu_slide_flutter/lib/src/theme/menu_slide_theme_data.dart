@@ -26,6 +26,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     required this.sectionTitleStyle,
     required this.menuButtonColor,
     required this.menuButtonIconColor,
+    required this.backdropColor,
     this.panelMaxWidth = 288,
     this.revealWidth = 265,
     this.panelRadius = 30,
@@ -67,6 +68,12 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
 
   /// Color of the built-in floating menu button's [AnimatedIcon].
   final Color menuButtonIconColor;
+
+  /// Background color of the base layer filling the [MenuSlideShell] behind
+  /// the panel and the transformed host [child] during the diagonal reveal.
+  /// This is the color visible around/behind both layers, not a scrim
+  /// applied on top of them.
+  final Color backdropColor;
 
   /// Maximum width of the menu panel. Also the basis for every derived
   /// reveal-geometry constant below (replaces the sample's magic literal
@@ -140,6 +147,9 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         // white-on-white bug even when no host theming is registered.
         menuButtonColor: Color(0xFFFFFFFF),
         menuButtonIconColor: Color(0xFF17203A),
+        // A very dark, neutral navy that reads sensibly as the shell's base
+        // layer whether the host page content leans light or dark.
+        backdropColor: Color(0xFF0B1220),
       );
 
   /// Resolves the effective theme for [context]: an explicit per-instance
@@ -164,6 +174,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     TextStyle? sectionTitleStyle,
     Color? menuButtonColor,
     Color? menuButtonIconColor,
+    Color? backdropColor,
     double? panelMaxWidth,
     double? revealWidth,
     double? panelRadius,
@@ -183,6 +194,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       sectionTitleStyle: sectionTitleStyle ?? this.sectionTitleStyle,
       menuButtonColor: menuButtonColor ?? this.menuButtonColor,
       menuButtonIconColor: menuButtonIconColor ?? this.menuButtonIconColor,
+      backdropColor: backdropColor ?? this.backdropColor,
       panelMaxWidth: panelMaxWidth ?? this.panelMaxWidth,
       revealWidth: revealWidth ?? this.revealWidth,
       panelRadius: panelRadius ?? this.panelRadius,
@@ -207,6 +219,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       sectionTitleStyle: TextStyle.lerp(sectionTitleStyle, other.sectionTitleStyle, t)!,
       menuButtonColor: Color.lerp(menuButtonColor, other.menuButtonColor, t)!,
       menuButtonIconColor: Color.lerp(menuButtonIconColor, other.menuButtonIconColor, t)!,
+      backdropColor: Color.lerp(backdropColor, other.backdropColor, t)!,
       panelMaxWidth: _lerpDouble(panelMaxWidth, other.panelMaxWidth, t),
       revealWidth: _lerpDouble(revealWidth, other.revealWidth, t),
       panelRadius: _lerpDouble(panelRadius, other.panelRadius, t),
@@ -233,6 +246,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         other.sectionTitleStyle == sectionTitleStyle &&
         other.menuButtonColor == menuButtonColor &&
         other.menuButtonIconColor == menuButtonIconColor &&
+        other.backdropColor == backdropColor &&
         other.panelMaxWidth == panelMaxWidth &&
         other.revealWidth == revealWidth &&
         other.panelRadius == panelRadius &&
@@ -254,6 +268,7 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         sectionTitleStyle,
         menuButtonColor,
         menuButtonIconColor,
+        backdropColor,
         panelMaxWidth,
         revealWidth,
         panelRadius,

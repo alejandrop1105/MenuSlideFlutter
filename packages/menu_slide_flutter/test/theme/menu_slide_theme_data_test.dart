@@ -24,6 +24,7 @@ void main() {
       expect(theme.sectionTitleStyle.color, const Color(0xB3FFFFFF));
       expect(theme.menuButtonColor, const Color(0xFFFFFFFF));
       expect(theme.menuButtonIconColor, const Color(0xFF17203A));
+      expect(theme.backdropColor, const Color(0xFF0B1220));
       expect(theme.panelMaxWidth, 288);
       expect(theme.revealWidth, 265);
       expect(theme.panelRadius, 30);
@@ -73,6 +74,7 @@ void main() {
       expect(copy.sectionTitleStyle, base.sectionTitleStyle);
       expect(copy.menuButtonColor, base.menuButtonColor);
       expect(copy.menuButtonIconColor, base.menuButtonIconColor);
+      expect(copy.backdropColor, base.backdropColor);
       expect(copy.panelMaxWidth, base.panelMaxWidth);
       expect(copy.revealWidth, base.revealWidth);
       expect(copy.panelRadius, base.panelRadius);
@@ -128,6 +130,15 @@ void main() {
       final result = a.lerp(b, 0.5);
 
       expect(result.panelColor, Color.lerp(Colors.white, Colors.black, 0.5));
+    });
+
+    test('at t=0.5 interpolates backdropColor via Color.lerp', () {
+      final a = MenuSlideThemeData.fallback().copyWith(backdropColor: Colors.white);
+      final b = a.copyWith(backdropColor: Colors.black);
+
+      final result = a.lerp(b, 0.5);
+
+      expect(result.backdropColor, Color.lerp(Colors.white, Colors.black, 0.5));
     });
 
     test('with null other returns this unchanged', () {
@@ -210,6 +221,7 @@ void main() {
           base, isNot(equals(base.copyWith(sectionTitleStyle: const TextStyle(fontSize: 99)))));
       expect(base, isNot(equals(base.copyWith(menuButtonColor: Colors.red))));
       expect(base, isNot(equals(base.copyWith(menuButtonIconColor: Colors.red))));
+      expect(base, isNot(equals(base.copyWith(backdropColor: Colors.red))));
       expect(base, isNot(equals(base.copyWith(panelMaxWidth: 999))));
       expect(base, isNot(equals(base.copyWith(revealWidth: 999))));
       expect(base, isNot(equals(base.copyWith(panelRadius: 999))));
@@ -233,6 +245,7 @@ void main() {
         sectionTitleStyle: TextStyle(),
         menuButtonColor: Colors.white,
         menuButtonIconColor: Colors.black,
+        backdropColor: Colors.black,
       );
       late MenuSlideThemeData resolved;
 
@@ -250,6 +263,7 @@ void main() {
             sectionTitleStyle: TextStyle(),
             menuButtonColor: Colors.white,
             menuButtonIconColor: Colors.black,
+            backdropColor: Colors.black,
           ),
         ]),
         home: Builder(builder: (context) {
@@ -278,6 +292,7 @@ void main() {
             sectionTitleStyle: TextStyle(),
             menuButtonColor: Colors.white,
             menuButtonIconColor: Colors.black,
+            backdropColor: Colors.black,
           ),
         ]),
         home: Builder(builder: (context) {
