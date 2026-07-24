@@ -27,6 +27,10 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     required this.menuButtonColor,
     required this.menuButtonIconColor,
     required this.backdropColor,
+    this.backdropImage,
+    this.backdropBlurSigma = 0,
+    this.backdropOpacity = 1.0,
+    this.revealWidthFactor,
     this.panelMaxWidth = 288,
     this.revealWidth = 265,
     this.panelRadius = 30,
@@ -74,6 +78,31 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
   /// This is the color visible around/behind both layers, not a scrim
   /// applied on top of them.
   final Color backdropColor;
+
+  /// Optional image painted on top of [backdropColor] on the backdrop
+  /// layer. The package bundles no assets itself — the host supplies a
+  /// [DecorationImage] wrapping any [ImageProvider] (asset, memory,
+  /// network, etc.). `null` (the default) paints no image, just
+  /// [backdropColor].
+  final DecorationImage? backdropImage;
+
+  /// Gaussian blur sigma applied to the backdrop layer (color + optional
+  /// [backdropImage]). `0` (the default) applies no blur at all — the
+  /// backdrop is not wrapped in a blur filter, avoiding the cost of an
+  /// [ImageFiltered] layer when it is not needed.
+  final double backdropBlurSigma;
+
+  /// Opacity applied to the backdrop layer, from `0` (fully transparent) to
+  /// `1` (fully opaque, the default).
+  final double backdropOpacity;
+
+  /// When non-null, the host page/`child` content's reveal offset is
+  /// computed as a PERCENTAGE of the available viewport width
+  /// (`availableWidth * revealWidthFactor`) instead of the fixed
+  /// [revealWidth] pixel value — making the menu/page separation
+  /// responsive across viewport sizes. `null` (the default) preserves the
+  /// original fixed-pixel [revealWidth] behavior.
+  final double? revealWidthFactor;
 
   /// Maximum width of the menu panel. Also the basis for every derived
   /// reveal-geometry constant below (replaces the sample's magic literal
@@ -161,6 +190,14 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         MenuSlideThemeData.fallback();
   }
 
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// [backdropImage] and [revealWidthFactor] are nullable fields with a
+  /// `null` default — like every other parameter here, passing a value
+  /// overrides it, and omitting it preserves the current value. There is no
+  /// way to clear either back to `null` via `copyWith` (a `null` argument is
+  /// indistinguishable from "not provided"); construct a new
+  /// [MenuSlideThemeData] directly when that is required.
   @override
   MenuSlideThemeData copyWith({
     Color? panelColor,
@@ -175,6 +212,10 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     Color? menuButtonColor,
     Color? menuButtonIconColor,
     Color? backdropColor,
+    DecorationImage? backdropImage,
+    double? backdropBlurSigma,
+    double? backdropOpacity,
+    double? revealWidthFactor,
     double? panelMaxWidth,
     double? revealWidth,
     double? panelRadius,
@@ -195,6 +236,10 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       menuButtonColor: menuButtonColor ?? this.menuButtonColor,
       menuButtonIconColor: menuButtonIconColor ?? this.menuButtonIconColor,
       backdropColor: backdropColor ?? this.backdropColor,
+      backdropImage: backdropImage ?? this.backdropImage,
+      backdropBlurSigma: backdropBlurSigma ?? this.backdropBlurSigma,
+      backdropOpacity: backdropOpacity ?? this.backdropOpacity,
+      revealWidthFactor: revealWidthFactor ?? this.revealWidthFactor,
       panelMaxWidth: panelMaxWidth ?? this.panelMaxWidth,
       revealWidth: revealWidth ?? this.revealWidth,
       panelRadius: panelRadius ?? this.panelRadius,
@@ -220,6 +265,13 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       menuButtonColor: Color.lerp(menuButtonColor, other.menuButtonColor, t)!,
       menuButtonIconColor: Color.lerp(menuButtonIconColor, other.menuButtonIconColor, t)!,
       backdropColor: Color.lerp(backdropColor, other.backdropColor, t)!,
+      // Non-interpolable fields (an image and a nullable factor) snap from
+      // `this` to `other` at the midpoint, same convention as other
+      // discrete/nullable ThemeExtension fields across the Flutter SDK.
+      backdropImage: t < 0.5 ? backdropImage : other.backdropImage,
+      backdropBlurSigma: _lerpDouble(backdropBlurSigma, other.backdropBlurSigma, t),
+      backdropOpacity: _lerpDouble(backdropOpacity, other.backdropOpacity, t),
+      revealWidthFactor: t < 0.5 ? revealWidthFactor : other.revealWidthFactor,
       panelMaxWidth: _lerpDouble(panelMaxWidth, other.panelMaxWidth, t),
       revealWidth: _lerpDouble(revealWidth, other.revealWidth, t),
       panelRadius: _lerpDouble(panelRadius, other.panelRadius, t),
@@ -247,6 +299,10 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         other.menuButtonColor == menuButtonColor &&
         other.menuButtonIconColor == menuButtonIconColor &&
         other.backdropColor == backdropColor &&
+        other.backdropImage == backdropImage &&
+        other.backdropBlurSigma == backdropBlurSigma &&
+        other.backdropOpacity == backdropOpacity &&
+        other.revealWidthFactor == revealWidthFactor &&
         other.panelMaxWidth == panelMaxWidth &&
         other.revealWidth == revealWidth &&
         other.panelRadius == panelRadius &&
@@ -255,8 +311,11 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         other.itemSpacing == itemSpacing;
   }
 
+  // `Object.hash` only supports up to 20 positional arguments — this
+  // extension now has more fields than that, so `Object.hashAll` (which
+  // takes an Iterable) is used instead.
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         panelColor,
         selectedRowColor,
         rowIconColor,
@@ -269,11 +328,15 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         menuButtonColor,
         menuButtonIconColor,
         backdropColor,
+        backdropImage,
+        backdropBlurSigma,
+        backdropOpacity,
+        revealWidthFactor,
         panelMaxWidth,
         revealWidth,
         panelRadius,
         rowHeight,
         panelPadding,
         itemSpacing,
-      );
+      ]);
 }

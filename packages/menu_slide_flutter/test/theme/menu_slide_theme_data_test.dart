@@ -1,6 +1,15 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:menu_slide_flutter/menu_slide_flutter.dart';
+
+/// A minimal valid 1x1 transparent PNG, used to build a real [MemoryImage]
+/// for backdrop-image tests without adding an asset/network dependency.
+final Uint8List _tinyPngBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+);
 
 void main() {
   group('MenuSlideThemeData.fallback', () {
@@ -31,6 +40,10 @@ void main() {
       expect(theme.rowHeight, 56);
       expect(theme.panelPadding, const EdgeInsets.all(8));
       expect(theme.itemSpacing, 0);
+      expect(theme.backdropImage, isNull);
+      expect(theme.backdropBlurSigma, 0);
+      expect(theme.backdropOpacity, 1.0);
+      expect(theme.revealWidthFactor, isNull);
     });
 
     test('derives reveal geometry constants from panelMaxWidth', () {
@@ -80,6 +93,10 @@ void main() {
       expect(copy.panelRadius, base.panelRadius);
       expect(copy.panelPadding, base.panelPadding);
       expect(copy.itemSpacing, base.itemSpacing);
+      expect(copy.backdropImage, base.backdropImage);
+      expect(copy.backdropBlurSigma, base.backdropBlurSigma);
+      expect(copy.backdropOpacity, base.backdropOpacity);
+      expect(copy.revealWidthFactor, base.revealWidthFactor);
     });
 
     test('with no arguments returns an equivalent instance', () {
@@ -89,6 +106,23 @@ void main() {
       expect(copy.panelColor, base.panelColor);
       expect(copy.rowHeight, base.rowHeight);
       expect(copy.rowTextStyle, base.rowTextStyle);
+    });
+
+    test('overrides backdropImage, backdropBlurSigma, backdropOpacity, revealWidthFactor', () {
+      final base = MenuSlideThemeData.fallback();
+      final image = DecorationImage(image: MemoryImage(_tinyPngBytes));
+
+      final copy = base.copyWith(
+        backdropImage: image,
+        backdropBlurSigma: 12,
+        backdropOpacity: 0.5,
+        revealWidthFactor: 0.6,
+      );
+
+      expect(copy.backdropImage, image);
+      expect(copy.backdropBlurSigma, 12);
+      expect(copy.backdropOpacity, 0.5);
+      expect(copy.revealWidthFactor, 0.6);
     });
   });
 
@@ -188,6 +222,33 @@ void main() {
 
       expect(identical(result, a), isTrue);
     });
+
+    test('at t=0.5 interpolates backdropBlurSigma and backdropOpacity numerically', () {
+      final a = MenuSlideThemeData.fallback().copyWith(backdropBlurSigma: 0, backdropOpacity: 0);
+      final b = a.copyWith(backdropBlurSigma: 20, backdropOpacity: 1);
+
+      final result = a.lerp(b, 0.5);
+
+      expect(result.backdropBlurSigma, 10);
+      expect(result.backdropOpacity, 0.5);
+    });
+
+    test('backdropImage snaps to this before t=0.5 and to other at/after t=0.5', () {
+      final a = MenuSlideThemeData.fallback();
+      final image = DecorationImage(image: MemoryImage(_tinyPngBytes));
+      final b = a.copyWith(backdropImage: image);
+
+      expect(a.lerp(b, 0.49).backdropImage, isNull);
+      expect(a.lerp(b, 0.5).backdropImage, image);
+    });
+
+    test('revealWidthFactor snaps to this before t=0.5 and to other at/after t=0.5', () {
+      final a = MenuSlideThemeData.fallback();
+      final b = a.copyWith(revealWidthFactor: 0.6);
+
+      expect(a.lerp(b, 0.49).revealWidthFactor, isNull);
+      expect(a.lerp(b, 0.5).revealWidthFactor, 0.6);
+    });
   });
 
   group('MenuSlideThemeData equality', () {
@@ -228,6 +289,15 @@ void main() {
       expect(base, isNot(equals(base.copyWith(rowHeight: 999))));
       expect(base, isNot(equals(base.copyWith(panelPadding: const EdgeInsets.all(99)))));
       expect(base, isNot(equals(base.copyWith(itemSpacing: 999))));
+      expect(
+        base,
+        isNot(equals(base.copyWith(
+          backdropImage: DecorationImage(image: MemoryImage(_tinyPngBytes)),
+        ))),
+      );
+      expect(base, isNot(equals(base.copyWith(backdropBlurSigma: 999))));
+      expect(base, isNot(equals(base.copyWith(backdropOpacity: 0.1))));
+      expect(base, isNot(equals(base.copyWith(revealWidthFactor: 0.5))));
     });
   });
 

@@ -14,6 +14,15 @@ const List<Color> demoColorPalette = [
   Color(0xFFB71C1C), // Deep red.
 ];
 
+/// Bundled backdrop images offered on the Configuration page, copied into
+/// this example app under `assets/backdrops/` (declared in `pubspec.yaml`).
+/// The package itself bundles no assets — these are entirely host-owned.
+const List<String> demoBackdropImageAssets = [
+  'assets/backdrops/spline.png',
+  'assets/backdrops/course_rive.png',
+  'assets/backdrops/grid_magnification.png',
+];
+
 /// Live controls for the demo's menu theming and layout: menu background,
 /// backdrop background, and a full-screen-menu toggle. Every control reads
 /// its current value from [settings] and writes back to it immediately —
@@ -67,6 +76,46 @@ class ConfigurationPage extends StatelessWidget {
               keyPrefix: 'config-backdrop-swatch',
               selected: settings.backdropColor,
               onSelected: (color) => settings.backdropColor = color,
+            ),
+            const SizedBox(height: 24),
+            _BackdropImageSection(
+              selectedAsset: settings.backdropImageAsset,
+              onSelected: (asset) => settings.backdropImageAsset = asset,
+            ),
+            const SizedBox(height: 24),
+            _LabeledSlider(
+              sliderKey: const Key('config-backdrop-blur-slider'),
+              title: 'Backdrop blur',
+              caption: 'Gaussian blur applied to the shell backdrop.',
+              value: settings.backdropBlur,
+              min: 0,
+              max: 20,
+              valueLabel: settings.backdropBlur.toStringAsFixed(1),
+              onChanged: (value) => settings.backdropBlur = value,
+            ),
+            const SizedBox(height: 24),
+            _LabeledSlider(
+              sliderKey: const Key('config-backdrop-opacity-slider'),
+              title: 'Backdrop opacity',
+              caption: 'Transparency of the shell backdrop layer.',
+              value: settings.backdropOpacity,
+              min: 0,
+              max: 1,
+              valueLabel: '${(settings.backdropOpacity * 100).round()}%',
+              onChanged: (value) => settings.backdropOpacity = value,
+            ),
+            const SizedBox(height: 24),
+            _LabeledSlider(
+              sliderKey: const Key('config-reveal-factor-slider'),
+              title: 'Menu / page separation',
+              caption:
+                  'Percentage of the screen width the page shifts by while the menu is open — '
+                  'responsive, not a fixed pixel value.',
+              value: settings.revealFactor,
+              min: 0.3,
+              max: 0.9,
+              valueLabel: '${(settings.revealFactor * 100).round()}%',
+              onChanged: (value) => settings.revealFactor = value,
             ),
           ],
         ),
@@ -162,4 +211,139 @@ class _ColorSwatch extends StatelessWidget {
 
   Color _contrastingIconColor(Color background) =>
       background.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+}
+
+/// Offers "None" plus a thumbnail per [demoBackdropImageAssets] entry.
+/// Tapping a thumbnail selects that asset; tapping "None" (highlighted when
+/// [selectedAsset] is `null`) clears the backdrop image override.
+class _BackdropImageSection extends StatelessWidget {
+  const _BackdropImageSection({required this.selectedAsset, required this.onSelected});
+
+  final String? selectedAsset;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Backdrop image', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          'An optional image painted on the shell backdrop, behind the panel and page.',
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _ImageThumbnail(
+              key: const Key('config-backdrop-image-none'),
+              isSelected: selectedAsset == null,
+              onTap: () => onSelected(null),
+              child: const Icon(Icons.block),
+            ),
+            for (var i = 0; i < demoBackdropImageAssets.length; i++)
+              _ImageThumbnail(
+                key: Key('config-backdrop-image-$i'),
+                isSelected: selectedAsset == demoBackdropImageAssets[i],
+                onTap: () => onSelected(demoBackdropImageAssets[i]),
+                child: Image.asset(demoBackdropImageAssets[i], fit: BoxFit.cover),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageThumbnail extends StatelessWidget {
+  const _ImageThumbnail({
+    super.key,
+    required this.child,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final Widget child;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 56,
+        height: 56,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+            width: isSelected ? 3 : 1,
+          ),
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+}
+
+/// A titled [Slider] with a caption and a live value label — shared layout
+/// for every numeric knob on the Configuration page (backdrop blur/opacity,
+/// reveal separation).
+class _LabeledSlider extends StatelessWidget {
+  const _LabeledSlider({
+    required this.sliderKey,
+    required this.title,
+    required this.caption,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.valueLabel,
+    required this.onChanged,
+  });
+
+  final Key sliderKey;
+  final String title;
+  final String caption;
+  final double value;
+  final double min;
+  final double max;
+  final String valueLabel;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium),
+            Text(valueLabel, style: theme.textTheme.bodyMedium),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          caption,
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        Slider(
+          key: sliderKey,
+          value: value,
+          min: min,
+          max: max,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
 }
