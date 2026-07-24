@@ -8,8 +8,10 @@ library;
 
 export 'src/controller/menu_slide_controller.dart' show MenuSlideController;
 export 'src/models/menu_badge.dart' show MenuBadge;
-export 'src/models/menu_icon.dart' show MenuIcon, MenuIconData, MenuAssetIcon, MenuCustomIcon;
+export 'src/models/menu_icon.dart'
+    show MenuIcon, MenuIconData, MenuAssetIcon, MenuCustomIcon;
 export 'src/models/menu_item.dart' show MenuItem;
 export 'src/models/menu_section.dart' show MenuSection, groupItemsBySection;
 export 'src/theme/menu_slide_theme_data.dart' show MenuSlideThemeData;
+export 'src/widgets/menu_slide_scope.dart' show MenuSlideScope;
 export 'src/widgets/menu_slide_shell.dart' show MenuSlideShell;

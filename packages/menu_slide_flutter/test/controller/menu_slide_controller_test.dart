@@ -84,6 +84,13 @@ void main() {
       expect(controller.isRightOpen, isTrue);
     });
 
+    test('constructing with both isOpen and isRightOpen true throws an AssertionError', () {
+      expect(
+        () => MenuSlideController(isOpen: true, isRightOpen: true),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
     test('items getter is unmodifiable: mutating it throws UnsupportedError', () {
       final controller = MenuSlideController(items: const [_home, _settings]);
 

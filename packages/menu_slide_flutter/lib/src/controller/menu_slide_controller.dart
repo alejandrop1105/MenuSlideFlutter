@@ -25,7 +25,12 @@ class MenuSlideController extends ChangeNotifier {
     bool isOpen = false,
     bool isRightOpen = false,
     ThemeMode themeMode = ThemeMode.system,
-  })  : _items = List.unmodifiable(items),
+  })  : assert(
+          !(isOpen && isRightOpen),
+          'MenuSlideController cannot start with both isOpen and isRightOpen '
+          'true — the two sides are mutually exclusive.',
+        ),
+        _items = List.unmodifiable(items),
         _isOpen = isOpen,
         _isRightOpen = isRightOpen,
         _themeMode = themeMode,
