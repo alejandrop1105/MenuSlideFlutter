@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
@@ -86,26 +84,18 @@ class _RiveAppHomeState extends State<RiveAppHome>
     // swaps the body — the menu component itself never decides what to
     // load (design decision #638: click -> load model is host-owned).
     //
-    // Menu-driven nav (PR8 review FIX 2): selecting a row also CLOSES the
-    // menu and keeps the bottom tab bar in sync (see
-    // `CustomTabBar.onTabChange`, which sets `_lastMenuSelection` BEFORE
-    // calling the controller so this listener does not re-navigate/override
-    // `_tabBody` when the bottom bar is the one driving the change).
+    // Closing the menu on a row tap is now `MenuSlideShell`'s own behavior
+    // (`closeOnSelect`, default true, left at its default below) — the host
+    // no longer closes it here. `CustomTabBar.onTabChange` still sets
+    // `_lastMenuSelection` BEFORE calling the controller so this listener
+    // does not re-navigate/override `_tabBody` when the bottom bar is the
+    // one driving the change.
     final selectedId = _menuController.selectedItemId;
     if (selectedId != _lastMenuSelection) {
       if (selectedId != null) {
         _lastMenuSelection = selectedId;
         setState(() {
           _tabBody = _pageForMenuItemId(selectedId);
-        });
-        // Deferred to a microtask: `MenuSlideController.close()` itself
-        // calls `notifyListeners()`, so closing synchronously here would
-        // re-enter this listener while `_menuController`'s own
-        // notification is still in progress.
-        scheduleMicrotask(() {
-          if (mounted) {
-            _menuController.close();
-          }
         });
       } else {
         // Cleared — e.g. the bottom tab bar synced to a tab with no

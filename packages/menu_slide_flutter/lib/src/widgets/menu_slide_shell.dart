@@ -36,6 +36,7 @@ class MenuSlideShell extends StatefulWidget {
     this.headerBuilder,
     this.footerBuilder,
     this.showMenuButton = true,
+    this.closeOnSelect = true,
   });
 
   /// The host's page content, rendered alongside the menu panel.
@@ -77,6 +78,20 @@ class MenuSlideShell extends StatefulWidget {
   /// own UI instead (e.g. an AppBar leading icon) — the reveal animation
   /// itself is unaffected either way.
   final bool showMenuButton;
+
+  /// Whether tapping an enabled menu row closes the menu, in addition to
+  /// selecting it. Defaults to `true`.
+  ///
+  /// This fires on every enabled-row tap, regardless of whether the tapped
+  /// item was already the current selection — `MenuSlideController.
+  /// selectItem` is idempotent (no notification when re-selecting the same
+  /// id), so a host that only closed the menu in reaction to a selection
+  /// CHANGE would leave the menu open when the user re-taps the already-
+  /// selected row (a "dead click"). Closing on tap is component (shell)
+  /// behavior; navigation in response to a selection stays entirely
+  /// host-owned. Set to `false` to opt out and drive `controller.close()`
+  /// from the host instead.
+  final bool closeOnSelect;
 
   @override
   State<MenuSlideShell> createState() => _MenuSlideShellState();
@@ -200,6 +215,7 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
                         theme: theme,
                         headerBuilder: widget.headerBuilder,
                         footerBuilder: widget.footerBuilder,
+                        closeOnSelect: widget.closeOnSelect,
                       ),
                     ),
                   ),
@@ -278,6 +294,7 @@ class _MenuPanel extends StatelessWidget {
     required this.theme,
     this.headerBuilder,
     this.footerBuilder,
+    required this.closeOnSelect,
   });
 
   final MenuSlideController controller;
@@ -285,6 +302,7 @@ class _MenuPanel extends StatelessWidget {
   final MenuSlideThemeData theme;
   final WidgetBuilder? headerBuilder;
   final WidgetBuilder? footerBuilder;
+  final bool closeOnSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +322,22 @@ class _MenuPanel extends StatelessWidget {
           item: item,
           isSelected: controller.selectedItemId == item.id,
           theme: theme,
-          onTap: () => controller.selectItem(item.id),
+          onTap: () {
+            // Select first, then close (if enabled) — order matters so a
+            // host listener reacting to the selection notification always
+            // observes the new selection before/alongside the close
+            // notification. `selectItem` is idempotent (no notification
+            // when re-selecting the current id), so closing must NOT be
+            // gated on that notification firing — see `closeOnSelect`'s
+            // doc comment for the "dead click" scenario this avoids. Both
+            // calls happen synchronously from this tap callback, outside
+            // any controller notify cycle, so no reentrancy guard is
+            // needed here.
+            controller.selectItem(item.id);
+            if (closeOnSelect) {
+              controller.close();
+            }
+          },
         ));
       }
     }
