@@ -179,8 +179,10 @@ void main() {
       await tester.tap(find.byKey(Key('config-backdrop-swatch-$swatchIndex')));
       await tester.pumpAndSettle();
 
-      final backdrop = tester.widget<ColoredBox>(find.byKey(const Key('menu-slide-backdrop')));
-      expect(backdrop.color, demoColorPalette[swatchIndex]);
+      final backdrop =
+          tester.widget<DecoratedBox>(find.byKey(const Key('menu-slide-backdrop')));
+      final decoration = backdrop.decoration as BoxDecoration;
+      expect(decoration.color, demoColorPalette[swatchIndex]);
     });
 
     testWidgets('toggling full-screen menu composes the bottom nav inside the shell',
@@ -220,6 +222,64 @@ void main() {
         find.descendant(of: find.byType(MenuSlideShell), matching: find.byType(NavigationBar)),
         findsNothing,
       );
+    });
+
+    testWidgets(
+        'Configuration page renders backdrop image, blur, opacity, and reveal-separation controls',
+        (tester) async {
+      await tester.pumpWidget(const DemoApp());
+      await tester.pumpAndSettle();
+
+      await openConfigurationPage(tester);
+
+      expect(find.byKey(const Key('config-backdrop-image-none')), findsOneWidget);
+      expect(find.byKey(const Key('config-backdrop-image-0')), findsOneWidget);
+      expect(find.byKey(const Key('config-backdrop-blur-slider')), findsOneWidget);
+      expect(find.byKey(const Key('config-backdrop-opacity-slider')), findsOneWidget);
+      expect(find.byKey(const Key('config-reveal-factor-slider')), findsOneWidget);
+    });
+
+    testWidgets('picking a backdrop image thumbnail applies a non-null backdropImage to the shell',
+        (tester) async {
+      await tester.pumpWidget(const DemoApp());
+      await tester.pumpAndSettle();
+
+      await openConfigurationPage(tester);
+
+      await tester.tap(find.byKey(const Key('config-backdrop-image-0')));
+      await tester.pumpAndSettle();
+
+      final backdrop =
+          tester.widget<DecoratedBox>(find.byKey(const Key('menu-slide-backdrop')));
+      final decoration = backdrop.decoration as BoxDecoration;
+      expect(decoration.image, isNotNull);
+
+      // Picking "None" clears it back — proves the toggle is two-way.
+      await tester.tap(find.byKey(const Key('config-backdrop-image-none')));
+      await tester.pumpAndSettle();
+
+      final backdropAfterNone =
+          tester.widget<DecoratedBox>(find.byKey(const Key('menu-slide-backdrop')));
+      expect((backdropAfterNone.decoration as BoxDecoration).image, isNull);
+    });
+
+    testWidgets('dragging the menu/page separation slider updates the live responsive factor',
+        (tester) async {
+      await tester.pumpWidget(const DemoApp());
+      await tester.pumpAndSettle();
+
+      await openConfigurationPage(tester);
+
+      final sliderFinder = find.byKey(const Key('config-reveal-factor-slider'));
+      expect(sliderFinder, findsOneWidget);
+
+      final before = tester.widget<Slider>(sliderFinder);
+
+      await tester.drag(sliderFinder, const Offset(-200, 0));
+      await tester.pumpAndSettle();
+
+      final after = tester.widget<Slider>(sliderFinder);
+      expect(after.value, lessThan(before.value));
     });
   });
 }

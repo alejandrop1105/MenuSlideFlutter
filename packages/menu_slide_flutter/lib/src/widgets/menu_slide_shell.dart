@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
@@ -187,15 +188,27 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
         return Stack(
           fit: StackFit.expand,
           children: [
-            // BACKDROP layer: a plain, non-interactive fill occupying the
-            // shell's full bounds, painted BEHIND the panel and the
-            // transformed child. `ColoredBox` (unlike `Container`) has no
-            // gesture/hit-testing behavior of its own, so it never
-            // intercepts taps meant for the panel or child layers above it.
+            // BACKDROP layer: a non-interactive fill occupying the shell's
+            // full bounds, painted BEHIND the panel and the transformed
+            // child. `IgnorePointer` keeps it out of the hit-test tree
+            // regardless of what's painted on it (color, image, blur), so
+            // it never intercepts taps meant for the panel or child layers
+            // above it.
             Positioned.fill(
-              child: ColoredBox(
-                key: const Key('menu-slide-backdrop'),
-                color: theme.backdropColor,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: theme.backdropOpacity,
+                  child: _maybeBlur(
+                    theme.backdropBlurSigma,
+                    DecoratedBox(
+                      key: const Key('menu-slide-backdrop'),
+                      decoration: BoxDecoration(
+                        color: theme.backdropColor,
+                        image: theme.backdropImage,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             // PANEL layer: rotates/translates in from off-canvas-left and
@@ -233,17 +246,26 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
                 ),
               ),
             ),
-            // HOST CHILD layer: shrinks, slides right by `revealWidth`, and
-            // rotates as `anim` goes 0 -> 1 — ported verbatim from
-            // `home.dart`'s page-body `AnimatedBuilder`.
+            // HOST CHILD layer: shrinks, slides right by the effective
+            // reveal width, and rotates as `anim` goes 0 -> 1 — ported
+            // verbatim from `home.dart`'s page-body `AnimatedBuilder`. The
+            // reveal width is either the fixed `theme.revealWidth` pixel
+            // value, or — when `theme.revealWidthFactor` is set — a
+            // PERCENTAGE of the viewport's available width, computed from
+            // this LayoutBuilder's `constraints`, making the menu/page
+            // separation responsive across viewport sizes.
             RepaintBoundary(
               child: AnimatedBuilder(
                 animation: anim,
                 builder: (context, child) {
+                  final reveal = theme.revealWidthFactor != null
+                      ? constraints.maxWidth * theme.revealWidthFactor!
+                      : theme.revealWidth;
                   return Transform.scale(
                     scale: 1 - anim.value * 0.1,
                     child: Transform.translate(
-                      offset: Offset(anim.value * theme.revealWidth, 0),
+                      key: const Key('menu-slide-reveal-translate'),
+                      offset: Offset(anim.value * reveal, 0),
                       child: Transform(
                         alignment: Alignment.center,
                         transform: Matrix4.identity()
@@ -287,6 +309,17 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
       },
     );
   }
+}
+
+/// Wraps [child] in an [ImageFiltered] gaussian blur when [sigma] is
+/// positive; returns [child] unchanged when `sigma <= 0` so the shell never
+/// pays for a blur filter layer it does not need.
+Widget _maybeBlur(double sigma, Widget child) {
+  if (sigma <= 0) return child;
+  return ImageFiltered(
+    imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+    child: child,
+  );
 }
 
 /// Renders the panel as a fixed [headerBuilder] slot, then `controller.items`

@@ -243,6 +243,15 @@ class _DemoHomeState extends State<DemoHome> {
     final effectiveTheme = modeTheme.copyWith(
       panelColor: widget.settings.menuColor,
       backdropColor: widget.settings.backdropColor,
+      backdropImage: widget.settings.backdropImageAsset == null
+          ? null
+          : DecorationImage(
+              image: AssetImage(widget.settings.backdropImageAsset!),
+              fit: BoxFit.cover,
+            ),
+      backdropBlurSigma: widget.settings.backdropBlur,
+      backdropOpacity: widget.settings.backdropOpacity,
+      revealWidthFactor: widget.settings.revealFactor,
     );
 
     final navigationBar = _buildNavigationBar();

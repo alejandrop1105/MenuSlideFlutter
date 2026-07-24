@@ -3,9 +3,18 @@
 // from widget tests — hence the file-level ignore below.
 // ignore_for_file: invalid_use_of_protected_member
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:menu_slide_flutter/menu_slide_flutter.dart';
+
+/// A minimal valid 1x1 transparent PNG, used to build a real [MemoryImage]
+/// for backdrop-image tests without adding an asset/network dependency.
+final Uint8List _tinyPngBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+);
 
 void main() {
   Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
@@ -266,8 +275,9 @@ void main() {
       )));
 
       final backdrop =
-          tester.widget<ColoredBox>(find.byKey(const Key('menu-slide-backdrop')));
-      expect(backdrop.color, const Color(0xFF00FF00));
+          tester.widget<DecoratedBox>(find.byKey(const Key('menu-slide-backdrop')));
+      final decoration = backdrop.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF00FF00));
     });
 
     testWidgets('disposing after pumping does not throw and detaches the listener',
@@ -406,6 +416,174 @@ void main() {
       await tester.pump();
 
       expect(controller.selectedItemId, isNull);
+    });
+  });
+
+  group('MenuSlideShell backdrop styling', () {
+    testWidgets('backdropImage renders a non-null image on the backdrop DecoratedBox',
+        (tester) async {
+      final controller = MenuSlideController();
+      final image = DecorationImage(image: MemoryImage(_tinyPngBytes));
+      final customTheme = MenuSlideThemeData.fallback().copyWith(backdropImage: image);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        theme: customTheme,
+        child: const SizedBox.shrink(),
+      )));
+
+      final backdrop =
+          tester.widget<DecoratedBox>(find.byKey(const Key('menu-slide-backdrop')));
+      final decoration = backdrop.decoration as BoxDecoration;
+      expect(decoration.image, isNotNull);
+      expect(decoration.image, image);
+    });
+
+    testWidgets('backdropBlurSigma greater than 0 wraps the backdrop in an ImageFiltered',
+        (tester) async {
+      final controller = MenuSlideController();
+      final customTheme = MenuSlideThemeData.fallback().copyWith(backdropBlurSigma: 8);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        theme: customTheme,
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(find.byType(ImageFiltered), findsOneWidget);
+    });
+
+    testWidgets('backdropBlurSigma of 0 (the default) renders no ImageFiltered',
+        (tester) async {
+      final controller = MenuSlideController();
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        child: const SizedBox.shrink(),
+      )));
+
+      expect(find.byType(ImageFiltered), findsNothing);
+    });
+
+    testWidgets('backdropOpacity is applied to an Opacity widget wrapping the backdrop',
+        (tester) async {
+      final controller = MenuSlideController();
+      final customTheme = MenuSlideThemeData.fallback().copyWith(backdropOpacity: 0.4);
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        theme: customTheme,
+        child: const SizedBox.shrink(),
+      )));
+
+      final opacityWidget = tester.widget<Opacity>(
+        find
+            .ancestor(
+              of: find.byKey(const Key('menu-slide-backdrop')),
+              matching: find.byType(Opacity),
+            )
+            .first,
+      );
+      expect(opacityWidget.opacity, 0.4);
+    });
+
+    testWidgets('the backdrop layer stays non-interactive (IgnorePointer) with image+blur',
+        (tester) async {
+      final controller = MenuSlideController();
+      final customTheme = MenuSlideThemeData.fallback().copyWith(
+        backdropImage: DecorationImage(image: MemoryImage(_tinyPngBytes)),
+        backdropBlurSigma: 5,
+      );
+
+      await tester.pumpWidget(wrap(MenuSlideShell(
+        controller: controller,
+        theme: customTheme,
+        child: const SizedBox.shrink(),
+      )));
+
+      final ignorePointer = tester.widget<IgnorePointer>(
+        find
+            .ancestor(
+              of: find.byKey(const Key('menu-slide-backdrop')),
+              matching: find.byType(IgnorePointer),
+            )
+            .first,
+      );
+      expect(ignorePointer.ignoring, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('MenuSlideShell responsive reveal', () {
+    testWidgets(
+        'revealWidthFactor computes the child translate as a percentage of the available width',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 0.5);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final translateWidget = tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
+      expect(translateWidget.transform.getTranslation().x, closeTo(400 * 0.5, 0.01));
+    });
+
+    testWidgets('a different viewport width yields a proportionally different offset',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      final customTheme = MenuSlideThemeData.fallback().copyWith(revealWidthFactor: 0.5);
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 200,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final translateWidget = tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
+      expect(translateWidget.transform.getTranslation().x, closeTo(200 * 0.5, 0.01));
+    });
+
+    testWidgets('revealWidthFactor null falls back to the fixed revealWidth pixel value',
+        (tester) async {
+      final controller = MenuSlideController(isOpen: true);
+      // Default theme has revealWidthFactor: null, revealWidth: 265.
+      final customTheme = MenuSlideThemeData.fallback();
+
+      await tester.pumpWidget(wrap(
+        SizedBox(
+          width: 400,
+          height: 600,
+          child: MenuSlideShell(
+            controller: controller,
+            theme: customTheme,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final translateWidget = tester
+          .widget<Transform>(find.byKey(const Key('menu-slide-reveal-translate')));
+      expect(translateWidget.transform.getTranslation().x, closeTo(265, 0.01));
     });
   });
 
