@@ -72,6 +72,18 @@ void main() {
       expect(controller.themeMode, ThemeMode.dark);
     });
 
+    test('isRightOpen is false by default', () {
+      final controller = MenuSlideController();
+
+      expect(controller.isRightOpen, isFalse);
+    });
+
+    test('honors an explicit initial isRightOpen', () {
+      final controller = MenuSlideController(isRightOpen: true);
+
+      expect(controller.isRightOpen, isTrue);
+    });
+
     test('items getter is unmodifiable: mutating it throws UnsupportedError', () {
       final controller = MenuSlideController(items: const [_home, _settings]);
 
@@ -225,6 +237,134 @@ void main() {
       expect(controller.isOpen, isFalse);
 
       expect(counter.count, 2);
+    });
+  });
+
+  group('MenuSlideController right-panel open/close/toggle', () {
+    test('openRight() from closed sets isRightOpen true and notifies exactly once', () {
+      final controller = MenuSlideController();
+      final counter = _NotificationCounter(controller);
+
+      controller.openRight();
+
+      expect(controller.isRightOpen, isTrue);
+      expect(counter.count, 1);
+    });
+
+    test('openRight() is idempotent when already right-open: no notification', () {
+      final controller = MenuSlideController(isRightOpen: true);
+      final counter = _NotificationCounter(controller);
+
+      expect(() => controller.openRight(), returnsNormally);
+
+      expect(controller.isRightOpen, isTrue);
+      expect(counter.count, 0);
+    });
+
+    test('closeRight() from right-open sets isRightOpen false and notifies exactly once', () {
+      final controller = MenuSlideController(isRightOpen: true);
+      final counter = _NotificationCounter(controller);
+
+      controller.closeRight();
+
+      expect(controller.isRightOpen, isFalse);
+      expect(counter.count, 1);
+    });
+
+    test('closeRight() is idempotent when already closed: no notification', () {
+      final controller = MenuSlideController();
+      final counter = _NotificationCounter(controller);
+
+      expect(() => controller.closeRight(), returnsNormally);
+
+      expect(controller.isRightOpen, isFalse);
+      expect(counter.count, 0);
+    });
+
+    test('toggleRight() flips isRightOpen true then false, notifying each time', () {
+      final controller = MenuSlideController();
+      final counter = _NotificationCounter(controller);
+
+      controller.toggleRight();
+      expect(controller.isRightOpen, isTrue);
+
+      controller.toggleRight();
+      expect(controller.isRightOpen, isFalse);
+
+      expect(counter.count, 2);
+    });
+  });
+
+  group('MenuSlideController mutual exclusivity (left vs right)', () {
+    test('openRight() while left is open closes the left and opens the right with a single notify', () {
+      final controller = MenuSlideController(isOpen: true);
+      final counter = _NotificationCounter(controller);
+
+      controller.openRight();
+
+      expect(controller.isRightOpen, isTrue);
+      expect(controller.isOpen, isFalse);
+      expect(counter.count, 1);
+    });
+
+    test('open() (left) while right is open closes the right and opens the left with a single notify', () {
+      final controller = MenuSlideController(isRightOpen: true);
+      final counter = _NotificationCounter(controller);
+
+      controller.open();
+
+      expect(controller.isOpen, isTrue);
+      expect(controller.isRightOpen, isFalse);
+      expect(counter.count, 1);
+    });
+
+    test('toggle() (left) while right is open opens the left and closes the right', () {
+      final controller = MenuSlideController(isRightOpen: true);
+      final counter = _NotificationCounter(controller);
+
+      controller.toggle();
+
+      expect(controller.isOpen, isTrue);
+      expect(controller.isRightOpen, isFalse);
+      expect(counter.count, 1);
+    });
+
+    test('never both isOpen and isRightOpen true after a single operation: openRight then open sequence', () {
+      final controller = MenuSlideController();
+
+      controller.open();
+      expect(controller.isOpen && controller.isRightOpen, isFalse);
+
+      controller.openRight();
+      expect(controller.isOpen && controller.isRightOpen, isFalse);
+
+      controller.open();
+      expect(controller.isOpen && controller.isRightOpen, isFalse);
+
+      controller.toggleRight();
+      expect(controller.isOpen && controller.isRightOpen, isFalse);
+    });
+
+    test('openRight() when both sides start closed does not touch the left', () {
+      final controller = MenuSlideController();
+      final counter = _NotificationCounter(controller);
+
+      controller.openRight();
+
+      expect(controller.isOpen, isFalse);
+      expect(controller.isRightOpen, isTrue);
+      expect(counter.count, 1);
+    });
+
+    test('open() when both sides start closed does not touch the right', () {
+      final controller = MenuSlideController();
+      final counter = _NotificationCounter(controller);
+
+      controller.open();
+
+      expect(controller.isRightOpen, isFalse);
+      expect(controller.isOpen, isTrue);
+      expect(counter.count, 1);
     });
   });
 
