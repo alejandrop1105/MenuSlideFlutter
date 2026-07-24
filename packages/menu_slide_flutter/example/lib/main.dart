@@ -179,7 +179,8 @@ class _DemoHomeState extends State<DemoHome> {
     );
   }
 
-  Widget _themeToggleFooter(BuildContext context, MenuSlideThemeData menuTheme) {
+  Widget _themeToggleFooter(
+      BuildContext context, MenuSlideThemeData menuTheme) {
     return SwitchListTile(
       key: const Key('theme-toggle-switch'),
       contentPadding: EdgeInsets.zero,
@@ -191,8 +192,100 @@ class _DemoHomeState extends State<DemoHome> {
       // which rebuilds `MaterialApp` with the new `themeMode` — theming the
       // WHOLE app, not just this panel.
       onChanged: (value) {
-        widget.controller.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+        widget.controller
+            .setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
       },
+    );
+  }
+
+  /// The demo's `MenuSlideShell.rightPanel`: an ARBITRARY host widget — a
+  /// small notifications/quick-actions list, NOT a second menu-items list —
+  /// proving `rightPanel` renders whatever the host supplies.
+  ///
+  /// This is built EAGERLY (an ordinary `Widget`, not a lazy
+  /// `WidgetBuilder` like [headerBuilder]/[footerBuilder]), so the close
+  /// button below is wrapped in a [Builder] to obtain a `BuildContext` that
+  /// is actually a DESCENDANT of the shell's `MenuSlideScope` once mounted —
+  /// the enclosing `_DemoHomeState.build` context is an ANCESTOR of the
+  /// shell and would fail `MenuSlideScope.of`.
+  Widget _quickActionsPanel(MenuSlideThemeData menuTheme) {
+    Widget actionRow(IconData icon, String title, String subtitle) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: menuTheme.rowIconColor, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: menuTheme.rowTextStyle),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: menuTheme.sectionTitleStyle),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                  child: Text('Quick actions', style: menuTheme.rowTextStyle)),
+              Builder(
+                builder: (context) => IconButton(
+                  key: const Key('demo-close-right-button'),
+                  icon: Icon(Icons.close, color: menuTheme.rowIconColor),
+                  tooltip: 'Close',
+                  // Proves the RIGHT panel's own content can drive the
+                  // controller too — `MenuSlideScope.of` isn't only for
+                  // opening from the LEFT-hand host content.
+                  onPressed: () => MenuSlideScope.of(context).closeRight(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Opened from a plain IconButton anywhere in the page — see '
+            'MenuSlideScope.of(context).openRight().',
+            style: menuTheme.sectionTitleStyle,
+          ),
+          const SizedBox(height: 20),
+          actionRow(Icons.comment_outlined, 'New comment on "Q3 roadmap"',
+              '5 minutes ago'),
+          actionRow(Icons.rocket_launch_outlined, 'Release v1.4.0 shipped',
+              '1 hour ago'),
+          actionRow(Icons.warning_amber_outlined, 'Billing card expiring soon',
+              'Yesterday'),
+        ],
+      ),
+    );
+  }
+
+  /// A notifications button living in the shell's HOST CONTENT (not the
+  /// shell's own built-in [showMenuButton]) — proving `MenuSlideScope` lets
+  /// any ordinary widget drive the controller. Wrapped in [Builder] for the
+  /// same reason as the close button in [_quickActionsPanel]: it needs a
+  /// `BuildContext` that is a descendant of `MenuSlideScope` once mounted.
+  Widget _notificationsButton() {
+    return Builder(
+      builder: (context) => IconButton(
+        key: const Key('demo-open-right-button'),
+        icon: const Icon(Icons.notifications_outlined),
+        tooltip: 'Quick actions',
+        onPressed: () => MenuSlideScope.of(context).openRight(),
+      ),
     );
   }
 
@@ -257,6 +350,28 @@ class _DemoHomeState extends State<DemoHome> {
 
     final navigationBar = _buildNavigationBar();
 
+    // The notifications button lives ON TOP of each page, in the host's own
+    // content — NOT inside the shell's built-in `showMenuButton` — as a
+    // small always-visible overlay in the top-right corner. This is what
+    // demonstrates "open the right panel from any widget": the button below
+    // is an ordinary `IconButton` reached via `MenuSlideScope.of(context)`,
+    // not a special API the shell grants only to itself.
+    final pageWithNotificationsButton = Stack(
+      children: [
+        page,
+        Positioned(
+          top: 0,
+          right: 0,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: _notificationsButton(),
+            ),
+          ),
+        ),
+      ],
+    );
+
     // Host composition, not component behavior: `MenuSlideShell` simply
     // fills whatever space its `child` is given — it has no opinion on
     // where the bottom bar lives. When `fullScreenMenu` is enabled, the
@@ -266,8 +381,11 @@ class _DemoHomeState extends State<DemoHome> {
     // menu above it — the layout this demo shipped with before this toggle.
     final fullScreen = widget.settings.fullScreenMenu;
     final shellChild = fullScreen
-        ? Column(children: [Expanded(child: page), navigationBar])
-        : page;
+        ? Column(children: [
+            Expanded(child: pageWithNotificationsButton),
+            navigationBar
+          ])
+        : pageWithNotificationsButton;
 
     return Scaffold(
       body: MenuSlideShell(
@@ -276,6 +394,7 @@ class _DemoHomeState extends State<DemoHome> {
         theme: effectiveTheme,
         headerBuilder: (context) => _profileHeader(context, effectiveTheme),
         footerBuilder: (context) => _themeToggleFooter(context, effectiveTheme),
+        rightPanel: _quickActionsPanel(effectiveTheme),
         child: shellChild,
       ),
       bottomNavigationBar: fullScreen ? null : navigationBar,
