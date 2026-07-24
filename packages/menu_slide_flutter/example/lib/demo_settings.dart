@@ -99,4 +99,18 @@ class DemoSettings extends ChangeNotifier {
     _revealFactor = value;
     notifyListeners();
   }
+
+  double _tiltDegrees = 30;
+
+  /// Maximum Y-axis rotation (in degrees, 0..60) of the host page during the
+  /// diagonal reveal, applied via `MenuSlideThemeData.revealTiltDegrees`.
+  /// Independent of [revealFactor] — this exaggerates (or flattens) the
+  /// opening angle regardless of how much separation is configured.
+  double get tiltDegrees => _tiltDegrees;
+
+  set tiltDegrees(double value) {
+    if (value == _tiltDegrees) return;
+    _tiltDegrees = value;
+    notifyListeners();
+  }
 }

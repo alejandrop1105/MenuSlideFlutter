@@ -253,6 +253,7 @@ void main() {
       expect(find.byKey(const Key('config-backdrop-blur-slider')), findsOneWidget);
       expect(find.byKey(const Key('config-backdrop-opacity-slider')), findsOneWidget);
       expect(find.byKey(const Key('config-reveal-factor-slider')), findsOneWidget);
+      expect(find.byKey(const Key('config-tilt-degrees-slider')), findsOneWidget);
     });
 
     testWidgets('picking a backdrop image thumbnail applies a non-null backdropImage to the shell',
@@ -296,6 +297,30 @@ void main() {
 
       final after = tester.widget<Slider>(sliderFinder);
       expect(after.value, lessThan(before.value));
+    });
+
+    testWidgets(
+        'dragging the 3D tilt slider updates the settings and the shell\'s effective '
+        'revealTiltDegrees', (tester) async {
+      await tester.pumpWidget(const DemoApp());
+      await tester.pumpAndSettle();
+
+      await openConfigurationPage(tester);
+
+      final sliderFinder = find.byKey(const Key('config-tilt-degrees-slider'));
+      expect(sliderFinder, findsOneWidget);
+
+      final before = tester.widget<Slider>(sliderFinder);
+      final shellBefore = tester.widget<MenuSlideShell>(find.byType(MenuSlideShell));
+      expect(shellBefore.theme?.revealTiltDegrees, before.value);
+
+      await tester.drag(sliderFinder, const Offset(-200, 0));
+      await tester.pumpAndSettle();
+
+      final after = tester.widget<Slider>(sliderFinder);
+      final shellAfter = tester.widget<MenuSlideShell>(find.byType(MenuSlideShell));
+      expect(after.value, lessThan(before.value));
+      expect(shellAfter.theme?.revealTiltDegrees, after.value);
     });
   });
 }

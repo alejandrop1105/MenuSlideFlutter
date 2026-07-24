@@ -44,6 +44,7 @@ void main() {
       expect(theme.backdropBlurSigma, 0);
       expect(theme.backdropOpacity, 1.0);
       expect(theme.revealWidthFactor, isNull);
+      expect(theme.revealTiltDegrees, 30);
     });
 
     test('derives reveal geometry constants from panelMaxWidth', () {
@@ -97,6 +98,7 @@ void main() {
       expect(copy.backdropBlurSigma, base.backdropBlurSigma);
       expect(copy.backdropOpacity, base.backdropOpacity);
       expect(copy.revealWidthFactor, base.revealWidthFactor);
+      expect(copy.revealTiltDegrees, base.revealTiltDegrees);
     });
 
     test('with no arguments returns an equivalent instance', () {
@@ -117,12 +119,14 @@ void main() {
         backdropBlurSigma: 12,
         backdropOpacity: 0.5,
         revealWidthFactor: 0.6,
+        revealTiltDegrees: 45,
       );
 
       expect(copy.backdropImage, image);
       expect(copy.backdropBlurSigma, 12);
       expect(copy.backdropOpacity, 0.5);
       expect(copy.revealWidthFactor, 0.6);
+      expect(copy.revealTiltDegrees, 45);
     });
   });
 
@@ -233,6 +237,15 @@ void main() {
       expect(result.backdropOpacity, 0.5);
     });
 
+    test('at t=0.5 interpolates revealTiltDegrees numerically', () {
+      final a = MenuSlideThemeData.fallback().copyWith(revealTiltDegrees: 0);
+      final b = a.copyWith(revealTiltDegrees: 60);
+
+      final result = a.lerp(b, 0.5);
+
+      expect(result.revealTiltDegrees, 30);
+    });
+
     test('backdropImage snaps to this before t=0.5 and to other at/after t=0.5', () {
       final a = MenuSlideThemeData.fallback();
       final image = DecorationImage(image: MemoryImage(_tinyPngBytes));
@@ -298,6 +311,7 @@ void main() {
       expect(base, isNot(equals(base.copyWith(backdropBlurSigma: 999))));
       expect(base, isNot(equals(base.copyWith(backdropOpacity: 0.1))));
       expect(base, isNot(equals(base.copyWith(revealWidthFactor: 0.5))));
+      expect(base, isNot(equals(base.copyWith(revealTiltDegrees: 999))));
     });
   });
 
@@ -316,6 +330,7 @@ void main() {
         menuButtonColor: Colors.white,
         menuButtonIconColor: Colors.black,
         backdropColor: Colors.black,
+        revealTiltDegrees: 30,
       );
       late MenuSlideThemeData resolved;
 
@@ -334,6 +349,7 @@ void main() {
             menuButtonColor: Colors.white,
             menuButtonIconColor: Colors.black,
             backdropColor: Colors.black,
+            revealTiltDegrees: 30,
           ),
         ]),
         home: Builder(builder: (context) {
@@ -363,6 +379,7 @@ void main() {
             menuButtonColor: Colors.white,
             menuButtonIconColor: Colors.black,
             backdropColor: Colors.black,
+            revealTiltDegrees: 30,
           ),
         ]),
         home: Builder(builder: (context) {
