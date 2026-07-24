@@ -272,8 +272,23 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
                       ? (panelWidth + theme.revealWidthFactor! * (constraints.maxWidth - panelWidth))
                           .clamp(0.0, constraints.maxWidth)
                       : theme.revealWidth;
+                  // The 3D depth (the center-anchored SCALE and the
+                  // rotateY) is coupled to `revealWidthFactor` so the page
+                  // is flat & flush against the menu at 0% separation: a
+                  // center-anchored scale shrinks a widget from its own
+                  // center, which pushes the visible left edge to the
+                  // RIGHT of the translate offset — at factor 0 that would
+                  // reopen a gap between the menu and the page even though
+                  // `reveal == panelWidth`. Scaling the depth by the same
+                  // factor makes depth 0 at 0% (flat, flush, no rotation)
+                  // and the full depth effect at 100% separation. When
+                  // `revealWidthFactor` is null (the fixed-px `revealWidth`
+                  // fallback path), `depth` is 1.0, preserving the original
+                  // constants unchanged.
+                  final depth = theme.revealWidthFactor ?? 1.0;
                   return Transform.scale(
-                    scale: 1 - anim.value * 0.1,
+                    key: const Key('menu-slide-reveal-scale'),
+                    scale: 1 - anim.value * 0.1 * depth,
                     child: Transform.translate(
                       key: const Key('menu-slide-reveal-translate'),
                       offset: Offset(anim.value * reveal, 0),
@@ -281,7 +296,7 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
                         alignment: Alignment.center,
                         transform: Matrix4.identity()
                           ..setEntry(3, 2, 0.001)
-                          ..rotateY((anim.value * 30) * math.pi / 180),
+                          ..rotateY((anim.value * 30 * depth) * math.pi / 180),
                         child: child,
                       ),
                     ),
