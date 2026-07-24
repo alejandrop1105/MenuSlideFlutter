@@ -24,6 +24,8 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     required this.badgeTextColor,
     required this.rowTextStyle,
     required this.sectionTitleStyle,
+    required this.menuButtonColor,
+    required this.menuButtonIconColor,
     this.panelMaxWidth = 288,
     this.revealWidth = 265,
     this.panelRadius = 30,
@@ -58,6 +60,13 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
 
   /// Text style applied to a section title.
   final TextStyle sectionTitleStyle;
+
+  /// Background color of the built-in floating menu button's circular
+  /// container (`MenuSlideButton`).
+  final Color menuButtonColor;
+
+  /// Color of the built-in floating menu button's [AnimatedIcon].
+  final Color menuButtonIconColor;
 
   /// Maximum width of the menu panel. Also the basis for every derived
   /// reveal-geometry constant below (replaces the sample's magic literal
@@ -126,6 +135,11 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
           fontWeight: FontWeight.w600,
           fontSize: 15,
         ),
+        // A light circle with a dark icon reads on BOTH a light and a dark
+        // host page background, so this universal default fixes the
+        // white-on-white bug even when no host theming is registered.
+        menuButtonColor: Color(0xFFFFFFFF),
+        menuButtonIconColor: Color(0xFF17203A),
       );
 
   /// Resolves the effective theme for [context]: an explicit per-instance
@@ -148,6 +162,8 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
     Color? badgeTextColor,
     TextStyle? rowTextStyle,
     TextStyle? sectionTitleStyle,
+    Color? menuButtonColor,
+    Color? menuButtonIconColor,
     double? panelMaxWidth,
     double? revealWidth,
     double? panelRadius,
@@ -165,6 +181,8 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       badgeTextColor: badgeTextColor ?? this.badgeTextColor,
       rowTextStyle: rowTextStyle ?? this.rowTextStyle,
       sectionTitleStyle: sectionTitleStyle ?? this.sectionTitleStyle,
+      menuButtonColor: menuButtonColor ?? this.menuButtonColor,
+      menuButtonIconColor: menuButtonIconColor ?? this.menuButtonIconColor,
       panelMaxWidth: panelMaxWidth ?? this.panelMaxWidth,
       revealWidth: revealWidth ?? this.revealWidth,
       panelRadius: panelRadius ?? this.panelRadius,
@@ -187,6 +205,8 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
       badgeTextColor: Color.lerp(badgeTextColor, other.badgeTextColor, t)!,
       rowTextStyle: TextStyle.lerp(rowTextStyle, other.rowTextStyle, t)!,
       sectionTitleStyle: TextStyle.lerp(sectionTitleStyle, other.sectionTitleStyle, t)!,
+      menuButtonColor: Color.lerp(menuButtonColor, other.menuButtonColor, t)!,
+      menuButtonIconColor: Color.lerp(menuButtonIconColor, other.menuButtonIconColor, t)!,
       panelMaxWidth: _lerpDouble(panelMaxWidth, other.panelMaxWidth, t),
       revealWidth: _lerpDouble(revealWidth, other.revealWidth, t),
       panelRadius: _lerpDouble(panelRadius, other.panelRadius, t),
@@ -211,6 +231,8 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         other.badgeTextColor == badgeTextColor &&
         other.rowTextStyle == rowTextStyle &&
         other.sectionTitleStyle == sectionTitleStyle &&
+        other.menuButtonColor == menuButtonColor &&
+        other.menuButtonIconColor == menuButtonIconColor &&
         other.panelMaxWidth == panelMaxWidth &&
         other.revealWidth == revealWidth &&
         other.panelRadius == panelRadius &&
@@ -230,6 +252,8 @@ class MenuSlideThemeData extends ThemeExtension<MenuSlideThemeData> {
         badgeTextColor,
         rowTextStyle,
         sectionTitleStyle,
+        menuButtonColor,
+        menuButtonIconColor,
         panelMaxWidth,
         revealWidth,
         panelRadius,

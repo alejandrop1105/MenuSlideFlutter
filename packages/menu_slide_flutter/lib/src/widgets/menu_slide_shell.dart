@@ -267,6 +267,8 @@ class _MenuSlideShellState extends State<MenuSlideShell> with SingleTickerProvid
                 child: MenuSlideButton(
                   progress: anim,
                   onTap: widget.controller.toggle,
+                  backgroundColor: theme.menuButtonColor,
+                  iconColor: theme.menuButtonIconColor,
                 ),
               ),
           ],

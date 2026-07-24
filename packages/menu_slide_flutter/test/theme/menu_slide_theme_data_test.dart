@@ -22,6 +22,8 @@ void main() {
       expect(theme.sectionTitleStyle.fontSize, 15);
       expect(theme.sectionTitleStyle.fontWeight, FontWeight.w600);
       expect(theme.sectionTitleStyle.color, const Color(0xB3FFFFFF));
+      expect(theme.menuButtonColor, const Color(0xFFFFFFFF));
+      expect(theme.menuButtonIconColor, const Color(0xFF17203A));
       expect(theme.panelMaxWidth, 288);
       expect(theme.revealWidth, 265);
       expect(theme.panelRadius, 30);
@@ -69,6 +71,8 @@ void main() {
       expect(copy.badgeTextColor, base.badgeTextColor);
       expect(copy.rowTextStyle, base.rowTextStyle);
       expect(copy.sectionTitleStyle, base.sectionTitleStyle);
+      expect(copy.menuButtonColor, base.menuButtonColor);
+      expect(copy.menuButtonIconColor, base.menuButtonIconColor);
       expect(copy.panelMaxWidth, base.panelMaxWidth);
       expect(copy.revealWidth, base.revealWidth);
       expect(copy.panelRadius, base.panelRadius);
@@ -204,6 +208,8 @@ void main() {
       expect(base, isNot(equals(base.copyWith(rowTextStyle: const TextStyle(fontSize: 99)))));
       expect(
           base, isNot(equals(base.copyWith(sectionTitleStyle: const TextStyle(fontSize: 99)))));
+      expect(base, isNot(equals(base.copyWith(menuButtonColor: Colors.red))));
+      expect(base, isNot(equals(base.copyWith(menuButtonIconColor: Colors.red))));
       expect(base, isNot(equals(base.copyWith(panelMaxWidth: 999))));
       expect(base, isNot(equals(base.copyWith(revealWidth: 999))));
       expect(base, isNot(equals(base.copyWith(panelRadius: 999))));
@@ -225,6 +231,8 @@ void main() {
         badgeTextColor: Colors.black,
         rowTextStyle: TextStyle(),
         sectionTitleStyle: TextStyle(),
+        menuButtonColor: Colors.white,
+        menuButtonIconColor: Colors.black,
       );
       late MenuSlideThemeData resolved;
 
@@ -240,6 +248,8 @@ void main() {
             badgeTextColor: Colors.black,
             rowTextStyle: TextStyle(),
             sectionTitleStyle: TextStyle(),
+            menuButtonColor: Colors.white,
+            menuButtonIconColor: Colors.black,
           ),
         ]),
         home: Builder(builder: (context) {
@@ -266,6 +276,8 @@ void main() {
             badgeTextColor: Colors.black,
             rowTextStyle: TextStyle(),
             sectionTitleStyle: TextStyle(),
+            menuButtonColor: Colors.white,
+            menuButtonIconColor: Colors.black,
           ),
         ]),
         home: Builder(builder: (context) {

@@ -48,6 +48,14 @@ class AppTheme {
             fontSize: 13,
             letterSpacing: 0.4,
           ),
+          // Light mode: a white surface with a dark icon. Dark mode: an
+          // elevated dark surface with a light icon — visibly the dark-mode
+          // variant, never white-on-white.
+          menuButtonColor: brightness == Brightness.dark
+              ? colorScheme.surfaceContainerHigh
+              : Colors.white,
+          menuButtonIconColor:
+              brightness == Brightness.dark ? colorScheme.onSurface : const Color(0xFF17203A),
         ),
       ],
     );
