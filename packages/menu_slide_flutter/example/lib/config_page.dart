@@ -63,10 +63,12 @@ class ConfigurationPage extends StatelessWidget {
             const SizedBox(height: 24),
             _SwatchSection(
               title: 'Menu background',
-              caption: 'Colors the menu panel behind its rows.',
+              caption: 'Colors the menu panel behind its rows. Pick the transparent swatch to '
+                  'let the backdrop show through the panel.',
               keyPrefix: 'config-menu-swatch',
               selected: settings.menuColor,
               onSelected: (color) => settings.menuColor = color,
+              includeTransparentOption: true,
             ),
             const SizedBox(height: 24),
             _SwatchSection(
@@ -109,11 +111,11 @@ class ConfigurationPage extends StatelessWidget {
               sliderKey: const Key('config-reveal-factor-slider'),
               title: 'Menu / page separation',
               caption:
-                  'Percentage of the screen width the page shifts by while the menu is open — '
-                  'responsive, not a fixed pixel value.',
+                  "0% = flush with the menu's edge; increasing adds a gap (responsive % of "
+                  'the remaining width).',
               value: settings.revealFactor,
-              min: 0.3,
-              max: 0.9,
+              min: 0.0,
+              max: 0.85,
               valueLabel: '${(settings.revealFactor * 100).round()}%',
               onChanged: (value) => settings.revealFactor = value,
             ),
@@ -131,6 +133,7 @@ class _SwatchSection extends StatelessWidget {
     required this.keyPrefix,
     required this.selected,
     required this.onSelected,
+    this.includeTransparentOption = false,
   });
 
   final String title;
@@ -141,6 +144,11 @@ class _SwatchSection extends StatelessWidget {
   /// set yet (no swatch shows as selected in that case).
   final Color? selected;
   final ValueChanged<Color> onSelected;
+
+  /// When `true`, appends a recognizable transparent swatch after the
+  /// preset palette — selecting it sets the target color to
+  /// [Colors.transparent], letting whatever renders behind it show through.
+  final bool includeTransparentOption;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +173,12 @@ class _SwatchSection extends StatelessWidget {
                 color: demoColorPalette[i],
                 isSelected: demoColorPalette[i] == selected,
                 onTap: () => onSelected(demoColorPalette[i]),
+              ),
+            if (includeTransparentOption)
+              _TransparentSwatch(
+                key: Key('$keyPrefix-transparent'),
+                isSelected: selected == Colors.transparent,
+                onTap: () => onSelected(Colors.transparent),
               ),
           ],
         ),
@@ -211,6 +225,47 @@ class _ColorSwatch extends StatelessWidget {
 
   Color _contrastingIconColor(Color background) =>
       background.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+}
+
+/// A recognizable "transparent" swatch option: an invisible fill would be
+/// impossible to see or tap with confidence, so this renders a bordered
+/// circle with a reset-color icon instead — matching [_ColorSwatch]'s size
+/// and selected-state highlight (a thicker primary-colored border).
+class _TransparentSwatch extends StatelessWidget {
+  const _TransparentSwatch({
+    super.key,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+            width: isSelected ? 3 : 1,
+          ),
+        ),
+        child: Icon(
+          Icons.format_color_reset,
+          color: theme.colorScheme.onSurfaceVariant,
+          size: 18,
+        ),
+      ),
+    );
+  }
 }
 
 /// Offers "None" plus a thumbnail per [demoBackdropImageAssets] entry.

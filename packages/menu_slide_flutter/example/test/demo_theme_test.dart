@@ -168,6 +168,22 @@ void main() {
       expect(panel.color, demoColorPalette[swatchIndex]);
     });
 
+    testWidgets('tapping the transparent menu-background swatch makes the panel transparent',
+        (tester) async {
+      await tester.pumpWidget(const DemoApp());
+      await tester.pumpAndSettle();
+
+      await openConfigurationPage(tester);
+
+      await tester.tap(find.byKey(const Key('config-menu-swatch-transparent')));
+      await tester.pumpAndSettle();
+
+      await openMenu(tester);
+
+      final panel = tester.widget<Container>(find.byKey(const Key('menu-slide-panel')));
+      expect(panel.color, Colors.transparent);
+    });
+
     testWidgets('tapping a backdrop swatch updates the live shell backdrop color',
         (tester) async {
       await tester.pumpWidget(const DemoApp());
