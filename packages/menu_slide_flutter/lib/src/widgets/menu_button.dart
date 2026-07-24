@@ -13,6 +13,8 @@ class MenuSlideButton extends StatelessWidget {
     super.key,
     required this.progress,
     required this.onTap,
+    required this.backgroundColor,
+    required this.iconColor,
   });
 
   /// Drives the [AnimatedIcon]'s morph — the SAME animation that drives the
@@ -23,7 +25,19 @@ class MenuSlideButton extends StatelessWidget {
   /// Invoked on tap. The shell wires this to `controller.toggle()`.
   final VoidCallback onTap;
 
+  /// Background color of the circular container. Sourced from
+  /// `MenuSlideThemeData.menuButtonColor` so the button is theme-aware
+  /// instead of hardcoding a white circle that turns invisible against a
+  /// dark host background.
+  final Color backgroundColor;
+
+  /// Color of the [AnimatedIcon]. Sourced from
+  /// `MenuSlideThemeData.menuButtonIconColor` so the icon always contrasts
+  /// with [backgroundColor], regardless of light/dark mode.
+  final Color iconColor;
+
   static const double _size = 44;
+  static const double _iconSize = 24;
 
   @override
   Widget build(BuildContext context) {
@@ -35,14 +49,20 @@ class MenuSlideButton extends StatelessWidget {
           key: const Key('menu-slide-button'),
           width: _size,
           height: _size,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(_size / 2),
             boxShadow: const [
               BoxShadow(color: Color(0x33000000), blurRadius: 5, offset: Offset(0, 5)),
             ],
           ),
-          child: AnimatedIcon(icon: AnimatedIcons.menu_close, progress: progress),
+          child: AnimatedIcon(
+            icon: AnimatedIcons.menu_close,
+            progress: progress,
+            color: iconColor,
+            size: _iconSize,
+          ),
         ),
       ),
     );
